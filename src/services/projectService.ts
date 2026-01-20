@@ -41,7 +41,7 @@ export const projectService = {
 
   async addProjectKey(
     projectId: string,
-    data: { name: string; provider: string; key: string }
+    data: {provider: string; apiKey: string }
   ): Promise<ApiKey> {
     return apiClient.post<ApiKey>(`/_api/projects/${projectId}/keys`, data);
   },
@@ -72,8 +72,8 @@ export const projectService = {
   async addProjectMember(
     projectId: string,
     data: { email: string; role: 'admin' | 'member' | 'viewer' }
-  ): Promise<ProjectMember> {
-    return apiClient.post<ProjectMember>(`/_api/projects/${projectId}/members`, data);
+  ): Promise<{member:ProjectMember}> {
+    return apiClient.post<{ member: ProjectMember }>(`/_api/projects/${projectId}/members`, data);
   },
 
   async updateProjectMember(

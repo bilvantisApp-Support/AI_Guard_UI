@@ -49,6 +49,8 @@ export interface ProjectsResponse {
 
 export interface ProjectMember {
   userId: string;
+  name: string;
+  email: string;
   role: 'owner' | 'admin' | 'member' | 'viewer';
   addedAt: string;
 }
@@ -68,9 +70,10 @@ export interface ProjectSettings {
 
 export interface ApiKey {
   id: string;
+  keyId: string;
   projectId: string;
   name: string;
-  provider: 'openai' | 'anthropic' | 'google';
+  provider: 'openai' | 'anthropic' | 'gemini';
   keyPrefix: string;
   status: 'active' | 'inactive';
   lastUsed?: string;

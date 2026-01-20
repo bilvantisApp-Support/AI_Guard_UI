@@ -124,21 +124,22 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       }
 
       const token = await userCredential.user.getIdToken();
-      const response = await axios.post(
-        `${import.meta.env.VITE_API_BASE_URL}/_api/users/profile`,
-        { name },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+      
+      // const response = await axios.post(
+      //   `${import.meta.env.VITE_API_BASE_URL}/_api/users/profile`,
+      //   { name },
+      //   {
+      //     headers: {
+      //       Authorization: `Bearer ${token}`,
+      //     },
+      //   }
+      // );
 
-      setState({
-        user: response.data,
-        loading: false,
-        error: null,
-      });
+      // setState({
+      //   user: response.data,
+      //   loading: false,
+      //   error: null,
+      // });
     } catch (error: any) {
       setState((prev) => ({
         ...prev,
@@ -183,7 +184,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       if (!currentUser) throw new Error('No authenticated user');
 
       await updateProfile(currentUser, { displayName: name });
-      
+
       const token = await currentUser.getIdToken();
       const response = await axios.put(
         `${import.meta.env.VITE_API_BASE_URL}/_api/users/profile`,

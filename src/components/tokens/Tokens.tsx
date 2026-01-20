@@ -136,9 +136,11 @@ export const Tokens = () => {
       setCreateDialogOpen(false);
       setNewTokenDialog({ open: true, token: mockToken });
       notify('Demo mode: Token would be created in real implementation', { type: 'info' });
-      return;
+      return mockToken;
     }
-    await createMutation.mutateAsync(data);
+    const Token1 =await createMutation.mutateAsync(data);
+
+    return Token1;
   };
 
   const handleDeleteToken = async (tokenId: string) => {
@@ -291,7 +293,7 @@ export const Tokens = () => {
             }}
           >
 {`curl -H "Authorization: Bearer ${newTokenDialog.token?.token}" \\
-     https://api.aiguard.dev/_api/projects`}
+     http://localhost:3000/_api/projects/${newTokenDialog.token?.projectId}/keys`}
           </Box>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 3 }}>

@@ -22,13 +22,13 @@ import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
 import { useQuery } from '@tanstack/react-query';
 import { projectService } from '@/services/projectService';
-import { CreateTokenRequest, TOKEN_SCOPES } from '@/types/user';
+import { CreateTokenRequest, PersonalAccessToken, TOKEN_SCOPES } from '@/types/user';
 import { Project } from '@/types/api';
 
 interface CreateTokenDialogProps {
   open: boolean;
   onClose: () => void;
-  onSubmit: (data: CreateTokenRequest) => Promise<void>;
+  onSubmit: (data: CreateTokenRequest) => Promise<PersonalAccessToken>;
   loading?: boolean;
 }
 
@@ -94,7 +94,7 @@ export const CreateTokenDialog = ({
 
   const handleFormSubmit = async (data: any) => {
     try {
-      await onSubmit({
+      const result = await onSubmit({
         name: data.name,
         scopes: data.scopes,
         projectId: data.projectId || undefined,
