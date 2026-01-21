@@ -11,10 +11,11 @@ import {
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
+import { useEffect } from 'react';
 
 interface FormData {
   email: string;
-  role: 'admin' | 'member' | 'viewer';
+  role: 'admin' | 'member';
 }
 
 interface InviteMemberDialogProps {
@@ -30,8 +31,8 @@ const schema = yup.object({
     .email('Invalid email')
     .required('Email is required'),
   role: yup
-    .mixed<'admin' | 'member' | 'viewer'>()
-    .oneOf(['admin', 'member', 'viewer'])
+    .mixed<'admin' | 'member'>()
+    .oneOf([ 'admin', 'member'])
     .required('Role is required'),
 });
 
@@ -64,6 +65,12 @@ export const InviteMemberDialog = ({
     onClose();
   };
 
+  useEffect(()=>{
+    if(open){
+      reset();
+    }
+  },[open,reset])
+
   return (
     <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
       <DialogTitle>Invite Member</DialogTitle>
@@ -88,7 +95,6 @@ export const InviteMemberDialog = ({
           >
             <MenuItem value="admin">Admin</MenuItem>
             <MenuItem value="member">Member</MenuItem>
-            <MenuItem value="viewer">Viewer</MenuItem>
           </TextField>
         </Box>
       </DialogContent>

@@ -159,7 +159,7 @@ export const ProjectList = () => {
       setCreateDialogOpen(false);
       return;
     }
-    const project = await createMutation.mutateAsync(data);
+    await createMutation.mutateAsync(data);
    
 
   };
@@ -174,7 +174,7 @@ export const ProjectList = () => {
       return;
     }
 
-    const deletedProject = await deleteMutation.mutateAsync(deleteDialog.project.id);
+    await deleteMutation.mutateAsync(deleteDialog.project.id);
     
 
     setDeleteDialog({ open: false });

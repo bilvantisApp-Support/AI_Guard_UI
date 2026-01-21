@@ -71,7 +71,7 @@ export const projectService = {
 
   async addProjectMember(
     projectId: string,
-    data: { email: string; role: 'admin' | 'member' | 'viewer' }
+    data: { email: string; role: 'owner' | 'admin' | 'member' }
   ): Promise<{member:ProjectMember}> {
     return apiClient.post<{ member: ProjectMember }>(`/_api/projects/${projectId}/members`, data);
   },
@@ -79,7 +79,7 @@ export const projectService = {
   async updateProjectMember(
     projectId: string,
     memberId: string,
-    data: { role: 'admin' | 'member' | 'viewer' }
+    data: { role: 'owner' | 'admin' | 'member' }
   ): Promise<ProjectMember> {
     return apiClient.put<ProjectMember>(`/_api/projects/${projectId}/members/${memberId}`, data);
   },

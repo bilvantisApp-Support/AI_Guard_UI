@@ -15,7 +15,7 @@ export interface Project {
   ownerId: string;
   memberCount: number;
   apiKeyCount: number;
-  role: 'owner' | 'admin' | 'member' | 'viewer';
+  role: 'owner' | 'admin' | 'member';
   members?: ProjectMember[];
   settings?: ProjectSettings;
   usage?: UsageMetrics;
@@ -51,7 +51,7 @@ export interface ProjectMember {
   userId: string;
   name: string;
   email: string;
-  role: 'owner' | 'admin' | 'member' | 'viewer';
+  role: 'owner' | 'admin' | 'member';
   addedAt: string;
 }
 

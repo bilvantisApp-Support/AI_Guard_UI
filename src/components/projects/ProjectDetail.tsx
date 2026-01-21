@@ -193,7 +193,6 @@ export const ProjectDetail = () => {
     keyId: string
   ) => {
     setKeyMenuAnchor(event.currentTarget);
-    console.log("Selected key ID:", keyId);
     setSelectedKeyId(keyId);
   };
 
@@ -238,7 +237,6 @@ export const ProjectDetail = () => {
     provider: 'openai' | 'anthropic' | 'gemini';
     apiKey: string;
   }) => {
-    console.log("Adding API key with data:", data);
     await addKeyMutation.mutateAsync(data);
   };
 
@@ -265,7 +263,7 @@ export const ProjectDetail = () => {
   const inviteMemberMutation = useMutation({
     mutationFn: (data: {
       email: string;
-      role: 'admin' | 'member' | 'viewer';
+      role: 'admin' | 'member';
     }) => projectService.addProjectMember(id!, data),
 
     onSuccess: (res) => {
@@ -285,7 +283,7 @@ export const ProjectDetail = () => {
 
   const inviteMember = async (data: {
     email: string;
-    role: 'admin' | 'member' | 'viewer';
+    role:  'admin' | 'member';
   }) => {
     await inviteMemberMutation.mutateAsync(data);
   };
@@ -332,8 +330,6 @@ export const ProjectDetail = () => {
       case 'admin':
         return 'secondary';
       case 'member':
-        return 'default';
-      case 'viewer':
         return 'default';
       default:
         return 'default';
@@ -747,7 +743,6 @@ export const ProjectDetail = () => {
       >
         <MenuItem
           onClick={async () => {
-            console.log('Deleting key', selectedKeyId);
             if (selectedKeyId) {
               await deleteApiKey(selectedKeyId);
             }

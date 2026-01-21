@@ -25,6 +25,8 @@ import { userService } from '@/services/userService';
 import { useNotification } from '@/hooks/useNotification';
 import type { PersonalAccessToken, CreateTokenRequest } from '@/types/user';
 
+const BASE_URL = import.meta.env.VITE_API_BASE_URL;
+
 export const Tokens = () => {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [newTokenDialog, setNewTokenDialog] = useState<{
@@ -293,7 +295,7 @@ export const Tokens = () => {
             }}
           >
 {`curl -H "Authorization: Bearer ${newTokenDialog.token?.token}" \\
-     http://localhost:3000/_api/projects/${newTokenDialog.token?.projectId}/keys`}
+     ${BASE_URL}/_api/projects/${newTokenDialog.token?.projectId}/keys`}
           </Box>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 3 }}>

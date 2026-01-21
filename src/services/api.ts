@@ -117,9 +117,7 @@ class ApiClient {
   // Debug method to test API connectivity and headers
   public async testConnection(): Promise<any> {
     try {
-      console.log('Testing API connection with headers...');
       const response = await this.instance.get('/_api/health');
-      console.log('API test success:', response.data);
       return response.data;
     } catch (error) {
       console.error('API test failed:', error);

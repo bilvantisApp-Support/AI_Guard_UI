@@ -123,23 +123,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         await updateProfile(userCredential.user, { displayName: name });
       }
 
-      const token = await userCredential.user.getIdToken();
-      
-      // const response = await axios.post(
-      //   `${import.meta.env.VITE_API_BASE_URL}/_api/users/profile`,
-      //   { name },
-      //   {
-      //     headers: {
-      //       Authorization: `Bearer ${token}`,
-      //     },
-      //   }
-      // );
-
-      // setState({
-      //   user: response.data,
-      //   loading: false,
-      //   error: null,
-      // });
+     await userCredential.user.getIdToken();
     } catch (error: any) {
       setState((prev) => ({
         ...prev,

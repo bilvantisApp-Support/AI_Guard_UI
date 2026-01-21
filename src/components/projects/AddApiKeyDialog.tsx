@@ -16,7 +16,7 @@ import { ApiKey } from '@/types/api';
 import { useEffect } from 'react';
 
 const PROVIDER_REGEX: Record<string, RegExp> = {
-    openai:  /^sk-(proj-)?[A-Za-z0-9_-]{20,}$/,
+    openai: /^sk-(proj-)?[A-Za-z0-9_-]{20,}$/,
     anthropic: /^sk-ant-[A-Za-z0-9-_]{20,}$/,
     gemini: /^AIza[0-9A-Za-z\-_]{30,}$/,
 };
@@ -37,7 +37,8 @@ interface AddApiKeyDialogProps {
 const schema = (existingKeys: ApiKey[]) =>
     yup.object({
         provider: yup
-            .mixed<'openai' | 'anthropic' | 'gemini'>()
+            .mixed<FormData['provider']>()
+            .oneOf(['openai', 'anthropic', 'gemini'])
             .required('Provider is required')
             .test(
                 'duplicate-provider',
@@ -80,7 +81,7 @@ export const AddApiKeyDialog = ({
         watch,
         trigger,
     } = useForm<FormData>({
-        resolver: yupResolver(schema(existingKeys)) as any,
+        resolver: yupResolver(schema(existingKeys)),
         mode: 'onChange',
         reValidateMode: 'onChange',
         
@@ -93,6 +94,13 @@ export const AddApiKeyDialog = ({
             trigger('provider');
         }
     }, [selectedProvider, existingKeys, trigger]);
+
+    useEffect(() => {
+        if (open) {
+            reset();
+        }
+    }, [open, reset]);
+
 
     const providerAlreadyExists = existingKeys.some(
         (k) => k.provider === selectedProvider
