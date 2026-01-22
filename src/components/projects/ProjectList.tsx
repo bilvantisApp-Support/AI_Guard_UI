@@ -106,7 +106,7 @@ export const ProjectList = () => {
       settings: {
         rateLimiting: { enabled: true, maxRequests: 500, windowMs: 60000 },
         quotas: { daily: 5000, monthly: 150000 },
-        allowedProviders: ['openai', 'google'],
+        allowedProviders: ['openai', 'gemini'],
       },
       createdAt: '2024-07-05T00:00:00Z',
       updatedAt: '2024-07-21T14:20:00Z',

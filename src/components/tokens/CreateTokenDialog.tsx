@@ -43,6 +43,7 @@ const schema = yup.object({
     .of(yup.string().required())
     .min(1, 'At least one scope is required')
     .required('Scopes are required'),
+  llmProvider: yup.string().oneOf(['openai', 'anthropic', 'gemini']).optional(),
   projectId: yup.string().optional(),
   expiresInDays: yup.number().optional().min(1).max(365),
 });
@@ -66,6 +67,7 @@ export const CreateTokenDialog = ({
     defaultValues: {
       name: '',
       scopes: ['api:read', 'api:write'],
+      llmProvider: 'openai',
       projectId: undefined,
       expiresInDays: 30,
     },
@@ -78,6 +80,22 @@ export const CreateTokenDialog = ({
     staleTime: 5 * 60 * 1000,
   });
 
+  const selectedProjectId = watch('projectId');
+
+  const { data: selectedProject } = useQuery<Project>({
+    queryKey: ['project', selectedProjectId],
+    queryFn: () => {
+      return projectService.getProject(selectedProjectId!);
+    },
+  });
+
+  const allowedProviders =
+    selectedProject?.settings?.allowedProviders ?? [
+      'openai',
+      'anthropic',
+      'gemini',
+    ];
+
   const expiresInDays = watch('expiresInDays');
   const selectedScopes = watch('scopes');
 
@@ -87,16 +105,17 @@ export const CreateTokenDialog = ({
     expirationDate.setDate(expirationDate.getDate() + days);
     return expirationDate.toLocaleDateString('en-US', {
       year: 'numeric',
-      month: 'long', 
+      month: 'long',
       day: 'numeric'
     });
   };
 
   const handleFormSubmit = async (data: any) => {
     try {
-      const result = await onSubmit({
+      await onSubmit({
         name: data.name,
         scopes: data.scopes,
+        llmProvider: data.llmProvider || undefined,
         projectId: data.projectId || undefined,
         expiresInDays: data.expiresInDays || undefined,
       });
@@ -129,7 +148,7 @@ export const CreateTokenDialog = ({
           <Alert severity="info">
             Personal access tokens function like API keys. Store them securely and never share them.
           </Alert>
-          
+
           <TextField
             label="Token Name"
             fullWidth
@@ -201,7 +220,35 @@ export const CreateTokenDialog = ({
               </FormControl>
             )}
           />
-          
+
+          <Controller
+            name="llmProvider"
+            control={control}
+            render={({ field }) => (
+              <FormControl fullWidth error={!!errors.llmProvider}>
+                <InputLabel>LLM Provider</InputLabel>
+                <Select
+                  {...field}
+                  label="LLM Provider"
+                >
+                  <MenuItem value="openai"  disabled={!allowedProviders.includes('openai')}>OpenAI</MenuItem>
+                  <MenuItem value="anthropic" disabled={!allowedProviders.includes('anthropic')}>Anthropic</MenuItem>
+                  <MenuItem value="gemini" disabled={!allowedProviders.includes('gemini')}>Gemini</MenuItem>
+                </Select>
+
+                <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, ml: 1 }}>
+                  This token will only be able to access the selected LLM provider
+                </Typography>
+
+                {errors.llmProvider && (
+                  <Typography variant="caption" color="error" sx={{ mt: 0.5, ml: 1 }}>
+                    {errors.llmProvider.message}
+                  </Typography>
+                )}
+              </FormControl>
+            )}
+          />
+
           <Controller
             name="expiresInDays"
             control={control}
@@ -225,11 +272,11 @@ export const CreateTokenDialog = ({
               </FormControl>
             )}
           />
-          
+
           <Typography variant="body2" color="text.secondary">
             This token will {getExpirationDate(expiresInDays || undefined)}
           </Typography>
-          
+
           {(!expiresInDays) && (
             <Alert severity="warning">
               Tokens that never expire pose a security risk. Consider using a shorter expiration period.

@@ -85,7 +85,7 @@ export const Analytics = () => {
   const mockProviderData: ProviderData[] = [
     { provider: 'OpenAI', requests: 820, cost: 15.67, color: '#00A67E' },
     { provider: 'Anthropic', requests: 320, cost: 6.45, color: '#D97757' },
-    { provider: 'Google', requests: 110, cost: 1.33, color: '#4285F4' },
+    { provider: 'gemini', requests: 110, cost: 1.33, color: '#4285F4' },
   ];
 
   const mockModelData: ModelData[] = [

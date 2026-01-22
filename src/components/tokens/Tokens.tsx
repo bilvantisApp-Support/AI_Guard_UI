@@ -107,10 +107,10 @@ export const Tokens = () => {
   ];
 
   const displayTokens = error ? mockTokens : (tokens || []);
-  
+
   // Ensure displayTokens is always an array
   const safeDisplayTokens = Array.isArray(displayTokens) ? displayTokens : [];
-  
+
   // Debug logging to help troubleshoot the issue
   if (!Array.isArray(displayTokens)) {
     console.error('displayTokens is not an array:', {
@@ -140,7 +140,7 @@ export const Tokens = () => {
       notify('Demo mode: Token would be created in real implementation', { type: 'info' });
       return mockToken;
     }
-    const Token1 =await createMutation.mutateAsync(data);
+    const Token1 = await createMutation.mutateAsync(data);
 
     return Token1;
   };
@@ -168,6 +168,57 @@ export const Tokens = () => {
     }
   };
 
+  const generateCurlURL = (token: String, provider: 'openai' | 'anthropic' | 'gemini') => {
+
+    if (!provider) {
+      return 'No Provider Selected';
+    }
+    const baseHeaders = `-H "Content-Type: application/json" \\
+          -H "Authorization: Bearer ${token}" \\
+          -H "X-AI-Guard-Provider: ${provider}"`;
+
+    switch (provider) {
+      case 'openai':
+        return `curl -X POST ${BASE_URL}/v1/chat/completions \\
+          ${baseHeaders} \\
+          -d '{
+            "model": "gpt-4",
+            "messages": [
+              { "role": "user", "content": "Hello!" }
+            ]
+          }'`;
+      case 'gemini':
+        return `curl -X POST ${BASE_URL}/v1beta/models/:model/generateContent \\
+          ${baseHeaders} \\
+          -d '{
+            "contents": [
+              {
+                "role": "user",
+                "parts": [
+                  {
+                    "text": "Hello!"
+                  }
+                ]
+              }
+            ]
+          }'`;
+
+      case 'anthropic':
+        return `curl -X POST ${BASE_URL}/v1/messages \\
+          ${baseHeaders} \\
+          -d '{
+            "model": "claude-3-sonnet-20240229",
+            "max_tokens": 256,
+            "messages": [
+              { "role": "user", "content": "Hello!" }
+            ]
+          }'`;
+
+      default:
+        return 'No Provider Selected'
+    }
+  }
+
   return (
     <Box>
       <Box display="flex" alignItems="center" justifyContent="space-between" mb={3}>
@@ -190,7 +241,7 @@ export const Tokens = () => {
       )}
 
       <Alert severity="info" sx={{ mb: 3 }}>
-        Personal access tokens function like API keys and provide access to the AI Guard API. 
+        Personal access tokens function like API keys and provide access to the AI Guard API.
         Keep them secure and never share them in publicly accessible areas.
       </Alert>
 
@@ -248,25 +299,25 @@ export const Tokens = () => {
           <Alert severity="warning" sx={{ mb: 3 }}>
             <strong>Important:</strong> Copy this token now. You won't be able to see it again!
           </Alert>
-          
+
           <Typography variant="h6" gutterBottom>
             {newTokenDialog.token?.name}
           </Typography>
-          
-          <Box 
-            display="flex" 
-            alignItems="center" 
-            gap={1} 
-            p={2} 
-            bgcolor="grey.100" 
+
+          <Box
+            display="flex"
+            alignItems="center"
+            gap={1}
+            p={2}
+            bgcolor="grey.100"
             borderRadius={1}
             mb={2}
           >
-            <Typography 
-              variant="body1" 
-              fontFamily="monospace" 
-              sx={{ 
-                flex: 1, 
+            <Typography
+              variant="body1"
+              fontFamily="monospace"
+              sx={{
+                flex: 1,
                 wordBreak: 'break-all',
                 fontSize: '0.9rem',
               }}
@@ -277,14 +328,14 @@ export const Tokens = () => {
               <CopyIcon />
             </IconButton>
           </Box>
-          
+
           <Typography variant="body2" color="text.secondary">
             Use this token to authenticate your API requests by including it in the Authorization header:
           </Typography>
-          
-          <Box 
+
+          <Box
             component="pre"
-            sx={{ 
+            sx={{
               bgcolor: 'grey.900',
               color: 'white',
               p: 2,
@@ -294,16 +345,18 @@ export const Tokens = () => {
               overflow: 'auto',
             }}
           >
-{`curl -H "Authorization: Bearer ${newTokenDialog.token?.token}" \\
-     ${BASE_URL}/_api/projects/${newTokenDialog.token?.projectId}/keys`}
+            {generateCurlURL(
+              newTokenDialog.token?.token || '',
+              newTokenDialog.token?.llmProvider!
+            )}
           </Box>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 3 }}>
           <Button onClick={handleCopyNewToken} startIcon={<CopyIcon />}>
             Copy Token
           </Button>
-          <Button 
-            variant="contained" 
+          <Button
+            variant="contained"
             onClick={() => setNewTokenDialog({ open: false })}
           >
             I've Saved This Token
