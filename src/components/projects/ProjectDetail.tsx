@@ -144,8 +144,8 @@ export const ProjectDetail = () => {
       projectId: id || '1',
       name: 'OpenAI Production',
       provider: 'openai',
-      keyPrefix: 'sk-...abc123',
-      status: 'active',
+      maskedKey: 'sk-...abc123',
+      isActive: true,
       lastUsed: '2024-07-22T08:30:00Z',
       createdAt: '2024-07-01T00:00:00Z',
       updatedAt: '2024-07-01T00:00:00Z',
@@ -156,8 +156,8 @@ export const ProjectDetail = () => {
       projectId: id || '1',
       name: 'Anthropic Backup',
       provider: 'anthropic',
-      keyPrefix: 'sk-...def456',
-      status: 'active',
+      maskedKey: 'sk-...def456',
+      isActive: true,
       lastUsed: '2024-07-21T14:20:00Z',
       createdAt: '2024-07-02T00:00:00Z',
       updatedAt: '2024-07-02T00:00:00Z',
@@ -168,8 +168,8 @@ export const ProjectDetail = () => {
       projectId: id || '1',
       name: 'Google Testing',
       provider: 'gemini',
-      keyPrefix: 'AIz...ghi789',
-      status: 'inactive',
+      maskedKey: 'AIz...ghi789',
+      isActive: false,
       createdAt: '2024-07-03T00:00:00Z',
       updatedAt: '2024-07-03T00:00:00Z',
     },
@@ -504,9 +504,9 @@ export const ProjectDetail = () => {
                     secondaryAction={
                       <Box display="flex" alignItems="center" gap={1}>
                         <Chip
-                          label={key.status}
+                          label={key.isActive === true ? 'Active' : 'Inactive'}
                           size="small"
-                          color={key.status === 'active' ? 'success' : 'default'}
+                          color={key.isActive === true ? 'success' : 'default'}
                           variant="outlined"
                         />
                         <IconButton
@@ -529,7 +529,10 @@ export const ProjectDetail = () => {
                       secondary={
                         <Box>
                           <Typography variant="body2" color="text.secondary">
-                            {provider.name} • {key.keyPrefix}
+                            {provider.name}
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            {key.maskedKey}
                           </Typography>
                           {key.lastUsed && (
                             <Typography variant="caption" color="text.secondary">

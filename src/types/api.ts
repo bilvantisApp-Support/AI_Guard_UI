@@ -73,9 +73,9 @@ export interface ApiKey {
   keyId: string;
   projectId: string;
   name: string;
+  maskedKey: string;
   provider: 'openai' | 'anthropic' | 'gemini';
-  keyPrefix: string;
-  status: 'active' | 'inactive';
+  isActive: true | false;
   lastUsed?: string;
   createdAt: string;
   updatedAt: string;
