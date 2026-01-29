@@ -22,8 +22,9 @@ import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
 import { useQuery } from '@tanstack/react-query';
 import { projectService } from '@/services/projectService';
-import { CreateTokenRequest, PersonalAccessToken, TOKEN_SCOPES } from '@/types/user';
+import { APIUser, CreateTokenRequest, PersonalAccessToken, TOKEN_SCOPES } from '@/types/user';
 import { Project } from '@/types/api';
+import { userService } from '@/services/userService';
 
 interface CreateTokenDialogProps {
   open: boolean;
@@ -45,6 +46,7 @@ const schema = yup.object({
     .required('Scopes are required'),
   llmProvider: yup.string().oneOf(['openai', 'anthropic', 'gemini']).optional(),
   projectId: yup.string().optional(),
+  userId: yup.string().required('User is required'),
   expiresInDays: yup.number().optional().min(1).max(365),
 });
 
@@ -69,6 +71,7 @@ export const CreateTokenDialog = ({
       scopes: ['api:read', 'api:write'],
       llmProvider: 'openai',
       projectId: undefined,
+      userId: undefined,
       expiresInDays: 30,
     },
   });
@@ -86,6 +89,20 @@ export const CreateTokenDialog = ({
     queryKey: ['project', selectedProjectId],
     queryFn: () => {
       return projectService.getProject(selectedProjectId!);
+    },
+  });
+  
+  const { data: users = [] } = useQuery<APIUser[]>({
+    queryKey: ['users', selectedProjectId],
+    queryFn: async (): Promise<APIUser[]> => {
+      if (selectedProjectId && selectedProject?.members) {
+        return selectedProject.members.map((member) => ({
+          id: member.userId,
+          name: member.name,
+          email: member.email,
+        }));
+      }
+      return userService.getActiveUsers();
     },
   });
 
@@ -117,6 +134,7 @@ export const CreateTokenDialog = ({
         scopes: data.scopes,
         llmProvider: data.llmProvider || undefined,
         projectId: data.projectId || undefined,
+        userId: data.userId || undefined,
         expiresInDays: data.expiresInDays || undefined,
       });
       reset();
@@ -222,6 +240,33 @@ export const CreateTokenDialog = ({
           />
 
           <Controller
+            name="userId"
+            control={control}
+            render={({ field }) => (
+              <FormControl fullWidth error={!!errors.userId}>
+                <InputLabel>User</InputLabel>
+                <Select
+                  {...field}
+                  label="User"
+                  value={field.value || ''}
+                >
+                  {users.map((user) => (
+                    <MenuItem key={user.id} value={user.id}>
+                      {user.name} ({user.email})
+                    </MenuItem>
+                  ))}
+                </Select>
+                <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, ml: 1 }}>
+                  {selectedProjectId
+                    ? 'Only members of the selected project are shown'
+                    : 'All users are shown'}
+                </Typography>
+              </FormControl>
+            )}
+          />
+
+
+          <Controller
             name="llmProvider"
             control={control}
             render={({ field }) => (
@@ -231,7 +276,7 @@ export const CreateTokenDialog = ({
                   {...field}
                   label="LLM Provider"
                 >
-                  <MenuItem value="openai"  disabled={!allowedProviders.includes('openai')}>OpenAI</MenuItem>
+                  <MenuItem value="openai" disabled={!allowedProviders.includes('openai')}>OpenAI</MenuItem>
                   <MenuItem value="anthropic" disabled={!allowedProviders.includes('anthropic')}>Anthropic</MenuItem>
                   <MenuItem value="gemini" disabled={!allowedProviders.includes('gemini')}>Gemini</MenuItem>
                 </Select>

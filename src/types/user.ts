@@ -7,6 +7,12 @@ export interface User {
   updatedAt: string;
 }
 
+export interface APIUser {
+  id: string;
+  name: string;
+  email: string;
+}
+
 export interface AuthState {
   user: User | null;
   loading: boolean;
@@ -36,6 +42,7 @@ export interface CreateTokenRequest {
   scopes: string[];
   llmProvider?: 'openai' | 'anthropic' | 'gemini';
   projectId?: string;
+  userId?: string;
   expiresInDays?: number;
 }
 

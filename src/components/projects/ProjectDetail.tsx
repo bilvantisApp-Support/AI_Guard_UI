@@ -40,6 +40,8 @@ import { formatDistanceToNow } from 'date-fns';
 import { useNotification } from '@/hooks/useNotification';
 import { AddApiKeyDialog } from './AddApiKeyDialog';
 import { InviteMemberDialog } from './InviteMemberDialog';
+import { useAuth } from '@/contexts/AuthContext';
+import { UpdateMemberDialog } from './UpdateMemberDialog';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -62,6 +64,11 @@ function TabPanel(props: TabPanelProps) {
   );
 }
 
+type UpdateMemberPayload = {
+  memberId: string,
+  role: 'admin' | 'member'
+}
+
 export const ProjectDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -69,6 +76,7 @@ export const ProjectDetail = () => {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [tabValue, setTabValue] = useState(0);
   const [openAddKey, setOpenAddKey] = useState(false);
+  const { user } = useAuth();
   const { notify } = useNotification();
   const [keyMenuAnchor, setKeyMenuAnchor] = useState<null | HTMLElement>(null);
   const [selectedKeyId, setSelectedKeyId] = useState<string | null>(null);
@@ -76,6 +84,9 @@ export const ProjectDetail = () => {
   const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
 
   const [openInviteMember, setOpenInviteMember] = useState(false);
+  const [openEditMember, setOpenEditMember] = useState(false);
+  const [editingMember, setEditingMember] = useState<any>(null);
+
 
   const {
     data: project,
@@ -179,6 +190,13 @@ export const ProjectDetail = () => {
   const displayApiKeys = Array.isArray(projectError ? mockApiKeys : apiKeys)
     ? (projectError ? mockApiKeys : apiKeys)
     : mockApiKeys;
+
+  const currentMember = displayProject?.members?.find((m) => m.email == user?.email);
+  const currentUserRole = currentMember?.role;
+
+  const isOwner = currentUserRole === 'owner';
+  const isAdmin = currentUserRole === 'admin';
+  const isOwnerOrAdmin = isOwner || isAdmin;
 
   const handleMenuClick = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
@@ -307,6 +325,25 @@ export const ProjectDetail = () => {
 
   const removeMember = async (memberId: string) => {
     await removeMemberMutation.mutateAsync(memberId);
+  }
+  //Remove member mutation
+  const updateMemberMutation = useMutation({
+    mutationFn: ({ memberId, role }: UpdateMemberPayload) =>
+      projectService.updateProjectMember(id!, memberId, { role }),
+
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['project', id] });
+      notify('Member Updated successfully', { type: 'success' });
+      handleMemberMenuClose();
+    },
+
+    onError: () => {
+      notify('Failed to Update member', { type: 'error' });
+    },
+  });
+
+  const updateMember = async ({ memberId, role }: UpdateMemberPayload) => {
+    await updateMemberMutation.mutateAsync({ memberId, role });
   }
 
 
@@ -474,7 +511,10 @@ export const ProjectDetail = () => {
         <TabPanel value={tabValue} index={0}>
           <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
             <Typography variant="h6">API Keys</Typography>
-            <Button variant="contained" startIcon={<AddIcon />} onClick={() => setOpenAddKey(true)}>
+            <Button variant="contained" startIcon={<AddIcon />} onClick={() => {
+              if (!isOwnerOrAdmin) return;
+              setOpenAddKey(true);
+            }}>
               Add API Key
             </Button>
           </Box>
@@ -552,7 +592,10 @@ export const ProjectDetail = () => {
         <TabPanel value={tabValue} index={1}>
           <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
             <Typography variant="h6">Team Members</Typography>
-            <Button variant="contained" startIcon={<AddIcon />} onClick={() => setOpenInviteMember(true)}>
+            <Button variant="contained" startIcon={<AddIcon />} onClick={() => {
+              if (!isOwnerOrAdmin) return;
+              setOpenInviteMember(true);
+            }}>
               Invite Member
             </Button>
           </Box>
@@ -739,43 +782,61 @@ export const ProjectDetail = () => {
       </Menu>
 
       {/* Remove API key menu */}
-      <Menu
-        anchorEl={keyMenuAnchor}
-        open={Boolean(keyMenuAnchor)}
-        onClose={handleKeyMenuClose}
-      >
-        <MenuItem
-          onClick={async () => {
-            if (selectedKeyId) {
-              await deleteApiKey(selectedKeyId);
-            }
-            handleKeyMenuClose();
-          }}
-          sx={{ color: 'error.main' }}
+      {isOwnerOrAdmin && (
+        <Menu
+          anchorEl={keyMenuAnchor}
+          open={Boolean(keyMenuAnchor)}
+          onClose={handleKeyMenuClose}
         >
-          Delete Key
-        </MenuItem>
-      </Menu>
+          <MenuItem
+            onClick={async () => {
+              if (selectedKeyId) {
+                await deleteApiKey(selectedKeyId);
+              }
+              handleKeyMenuClose();
+            }}
+            sx={{ color: 'error.main' }}
+          >
+            Delete Key
+          </MenuItem>
+        </Menu>
+      )}
 
-      {/* Remove Member menu */}
-      <Menu
-        anchorEl={memberMenuAnchor}
-        open={Boolean(memberMenuAnchor)}
-        onClose={handleMemberMenuClose}
-      >
-        <MenuItem
-          onClick={async () => {
-            if (selectedMemberId) {
-              await removeMember(selectedMemberId);
-            }
-            handleMemberMenuClose();
-          }}
-          sx={{ color: 'error.main' }}
+
+      {/* Update and Remove Member menu */}
+      {isOwnerOrAdmin && (
+        <Menu
+          anchorEl={memberMenuAnchor}
+          open={Boolean(memberMenuAnchor)}
+          onClose={handleMemberMenuClose}
         >
-          Remove Member
-        </MenuItem>
-      </Menu>
+          <MenuItem
+            onClick={() => {
+              const member = displayProject.members?.find(
+                (m) => m.userId === selectedMemberId
+              );
+              setEditingMember(member);
+              setOpenEditMember(true);
+              handleMemberMenuClose();
+            }}
+          >
+            Update Member
+          </MenuItem>
 
+          <MenuItem
+            onClick={async () => {
+              if (selectedMemberId) {
+                await removeMember(selectedMemberId);
+              }
+              handleMemberMenuClose();
+            }}
+            sx={{ color: 'error.main' }}
+          >
+            Remove Member
+          </MenuItem>
+
+        </Menu>
+      )}
 
 
       <AddApiKeyDialog
@@ -792,6 +853,24 @@ export const ProjectDetail = () => {
         loading={inviteMemberMutation.isPending}
         onSubmit={inviteMember}
       />
+
+      {editingMember && (
+        <UpdateMemberDialog
+          open={openEditMember}
+          onClose={() => setOpenEditMember(false)}
+          projectName={displayProject.name}
+          memberName={editingMember.name}
+          currentRole={editingMember.role}
+          loading={updateMemberMutation.isPending}
+          onSubmit={async (role) => {
+            await updateMember({
+              memberId: editingMember.userId,
+              role,
+            });
+          }}
+        />
+      )}
+
 
     </Box>
   );
