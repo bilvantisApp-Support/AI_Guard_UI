@@ -208,7 +208,7 @@ export const Dashboard = () => {
         <Grid item xs={12} sm={6} lg={3}>
           <StatCard
             title="Total Cost"
-            value={`$${(displayStats?.totalCost || 0).toFixed(2)}`}
+            value={`$${(displayStats?.totalCost || 0).toFixed(4)}`}
             subtitle="This month"
             icon={CostIcon}
             color="success"

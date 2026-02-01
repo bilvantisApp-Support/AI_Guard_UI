@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import {
   Box,
   Typography,
@@ -41,9 +41,13 @@ import {
   AttachMoney as CostIcon,
   Speed as LatencyIcon,
 } from '@mui/icons-material';
+import { exportNodeToPDF } from './exportNodeToPDF';
+import { useQuery } from '@tanstack/react-query';
+import { analyticsService } from '@/services/analyticsService';
 
-interface AnalyticsData {
+export interface AnalyticsData {
   period: string;
+  projectId?: string;
   requests: number;
   tokens: number;
   cost: number;
@@ -67,9 +71,30 @@ interface ModelData {
 }
 
 export const Analytics = () => {
+  const handleExportPDF = async () => {
+    if (pdfRef.current) {
+      window.scrollTo({ top: 0, behavior: 'auto' });
+      setTimeout(async () => {
+        await exportNodeToPDF(pdfRef.current as HTMLElement, 'analytics.pdf');
+      }, 300);
+    }
+  };
   const theme = useTheme();
   const [timeRange, setTimeRange] = useState('7d');
   const [selectedProject, setSelectedProject] = useState('all');
+  const pdfRef = useRef<HTMLDivElement>(null);
+
+  const {
+    data: analyticsData,
+    error: analyticsError,
+  } = useQuery<
+    any
+  >({
+    queryKey: ['analytics-data', timeRange, selectedProject],
+    queryFn: () => analyticsService.getAnalyticsData({ timeRange, project: selectedProject }),
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    retry: 2,
+  });
 
   // Mock data since API might not be available
   const mockAnalyticsData: AnalyticsData[] = [
@@ -116,13 +141,40 @@ export const Analytics = () => {
     }
   };
 
-  const totalRequests = mockAnalyticsData.reduce((sum, item) => sum + item.requests, 0);
-  const totalTokens = mockAnalyticsData.reduce((sum, item) => sum + item.tokens, 0);
-  const totalCost = mockAnalyticsData.reduce((sum, item) => sum + item.cost, 0);
-  const avgLatency = mockAnalyticsData.reduce((sum, item) => sum + item.latency, 0) / mockAnalyticsData.length;
+  let allAnalyticsData: AnalyticsData[] = analyticsError
+    ? mockAnalyticsData
+    : analyticsData && 'analytics' in analyticsData && Array.isArray(analyticsData.analytics)
+      ? analyticsData.analytics.map((item: any) => ({
+        ...item,
+        projectId: item.projectId ? String(item.projectId) : undefined,
+        latency: typeof item.latency === 'number' ? +(item.latency / 1000).toFixed(2) : 0,
+      }))
+      : mockAnalyticsData;
+
+  const displayAnalyticsData: AnalyticsData[] = selectedProject === 'all'
+    ? allAnalyticsData
+    : allAnalyticsData.filter((item: any) => String(item.projectId) === String(selectedProject));
+
+  const displayProviderData: ProviderData[] = analyticsError
+    ? mockProviderData
+    : analyticsData && 'providers' in analyticsData && Array.isArray(analyticsData.providers)
+      ? analyticsData.providers
+      : mockProviderData;
+      
+  const displayModelData: ModelData[] = analyticsError
+    ? mockModelData
+    : analyticsData && 'models' in analyticsData && Array.isArray(analyticsData.models)
+      ? analyticsData.models
+      : mockModelData;
+
+  const totalRequests = displayAnalyticsData.reduce((sum, item) => sum + item.requests, 0);
+  const totalTokens = displayAnalyticsData.reduce((sum, item) => sum + item.tokens, 0);
+  const totalCost = displayAnalyticsData.reduce((sum, item) => sum + item.cost, 0);
+  const avgLatency = displayAnalyticsData.length > 0 ? displayAnalyticsData.reduce((sum, item) => sum + item.latency, 0) / displayAnalyticsData.length : 0;
 
   return (
     <Box>
+      <div ref={pdfRef}>
       <Box display="flex" alignItems="center" justifyContent="space-between" mb={3}>
         <Typography variant="h4" component="h1">
           Analytics
@@ -149,33 +201,38 @@ export const Analytics = () => {
               onChange={(e) => setSelectedProject(e.target.value)}
             >
               <MenuItem value="all">All Projects</MenuItem>
-              <MenuItem value="1">ChatBot App</MenuItem>
-              <MenuItem value="2">Content Gen</MenuItem>
-              <MenuItem value="3">Research AI</MenuItem>
+              {analyticsData?.projects?.map((proj: any) => (
+                <MenuItem key={proj.id} value={proj.id}>
+                  {proj.name || proj.id}
+                </MenuItem>
+              ))}
             </Select>
           </FormControl>
           <Button
             variant="outlined"
             startIcon={<RefreshIcon />}
+            onClick={() => window.location.reload()}
           >
             Refresh
           </Button>
           <Button
             variant="outlined"
             startIcon={<ExportIcon />}
+            onClick={handleExportPDF}
           >
             Export
           </Button>
         </Box>
       </Box>
 
-      <Alert severity="info" sx={{ mb: 3 }}>
-        Using demo analytics data - connect your AI Guard server to see live usage analytics and detailed insights.
-      </Alert>
+
+        {analyticsError && (<Alert severity="info" sx={{ mb: 3 }}>
+          Using demo analytics data - connect your AI Guard server to see live usage analytics and detailed insights.
+        </Alert>)}
 
       {/* Summary Stats */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid item xs={12} sm={6} lg={3}>
+        <Grid item xs={12} sm={6} md={3} lg={3}>
           <StatCard
             title="Total Requests"
             value={totalRequests}
@@ -185,7 +242,7 @@ export const Analytics = () => {
             trend={{ value: 15.2, isPositive: true }}
           />
         </Grid>
-        <Grid xs={12} sm={6} lg={3}>
+        <Grid item xs={12} sm={6} md={3} lg={3}>
           <StatCard
             title="Tokens Processed"
             value={totalTokens.toLocaleString()}
@@ -195,17 +252,17 @@ export const Analytics = () => {
             trend={{ value: 8.7, isPositive: true }}
           />
         </Grid>
-        <Grid xs={12} sm={6} lg={3}>
+        <Grid item xs={12} sm={6} md={3} lg={3}>
           <StatCard
             title="Total Cost"
-            value={`$${totalCost.toFixed(2)}`}
-            subtitle={`~$${(totalCost / 7).toFixed(2)}/day avg`}
+            value={`$${totalCost.toFixed(4)}`}
+            subtitle={`~$${(totalCost / 7).toFixed()}/day avg`}
             icon={CostIcon}
             color="success"
             trend={{ value: -3.1, isPositive: false }}
           />
         </Grid>
-        <Grid xs={12} sm={6} lg={3}>
+        <Grid item xs={12} sm={6} md={3} lg={3}>
           <StatCard
             title="Avg Latency"
             value={`${avgLatency.toFixed(2)}s`}
@@ -226,7 +283,7 @@ export const Analytics = () => {
             </Typography>
             <Box height={300}>
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={mockAnalyticsData}>
+                <AreaChart data={displayAnalyticsData}>
                   <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} />
                   <XAxis
                     dataKey="period"
@@ -269,7 +326,7 @@ export const Analytics = () => {
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
-                    data={mockProviderData}
+                    data={displayProviderData}
                     cx="50%"
                     cy="50%"
                     innerRadius={60}
@@ -278,7 +335,7 @@ export const Analytics = () => {
                     dataKey="requests"
                     label={({ provider, percent }) => `${provider} ${((percent || 0) * 100).toFixed(0)}%`}
                   >
-                    {mockProviderData.map((entry, index) => (
+                    {displayProviderData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
                   </Pie>
@@ -301,7 +358,7 @@ export const Analytics = () => {
             </Typography>
             <Box height={300}>
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={mockAnalyticsData}>
+                <LineChart data={displayAnalyticsData}>
                   <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} />
                   <XAxis
                     dataKey="period"
@@ -341,7 +398,7 @@ export const Analytics = () => {
             </Typography>
             <Box height={300}>
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={mockAnalyticsData}>
+                <LineChart data={displayAnalyticsData}>
                   <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} />
                   <XAxis
                     dataKey="period"
@@ -381,7 +438,7 @@ export const Analytics = () => {
         </Typography>
         <Box height={350}>
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={mockModelData}>
+            <BarChart data={displayModelData}>
               <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} />
               <XAxis dataKey="model" stroke={theme.palette.text.secondary} />
               <YAxis yAxisId="left" stroke={theme.palette.text.secondary} />
@@ -411,6 +468,7 @@ export const Analytics = () => {
           </ResponsiveContainer>
         </Box>
       </Paper>
+      </div>
     </Box>
   );
 };
