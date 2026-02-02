@@ -44,6 +44,7 @@ import {
 import { exportNodeToPDF } from '../../utils/exportNodeToPDF';
 import { useQuery } from '@tanstack/react-query';
 import { analyticsService } from '@/services/analyticsService';
+import { AnalyticsDataResponse } from '@/types/analytics';
 
 export interface AnalyticsData {
   period: string;
@@ -87,9 +88,7 @@ export const Analytics = () => {
   const {
     data: analyticsData,
     error: analyticsError,
-  } = useQuery<
-    any
-  >({
+  } = useQuery<AnalyticsDataResponse>({
     queryKey: ['analytics-data', timeRange, selectedProject],
     queryFn: () => analyticsService.getAnalyticsData({ timeRange, project: selectedProject }),
     staleTime: 5 * 60 * 1000, // 5 minutes

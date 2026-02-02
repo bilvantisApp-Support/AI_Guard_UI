@@ -23,8 +23,14 @@ export interface ModelData {
   avgLatency: number;
 }
 
+export interface ProjectData{
+  id:string,
+  name:string
+}
+
 export interface AnalyticsDataResponse {
   analytics: AnalyticsData[];
   providers: ProviderData[];
   models: ModelData[];
+  projects:ProjectData[];
 }
