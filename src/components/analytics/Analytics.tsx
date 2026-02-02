@@ -41,7 +41,7 @@ import {
   AttachMoney as CostIcon,
   Speed as LatencyIcon,
 } from '@mui/icons-material';
-import { exportNodeToPDF } from './exportNodeToPDF';
+import { exportNodeToPDF } from '../../utils/exportNodeToPDF';
 import { useQuery } from '@tanstack/react-query';
 import { analyticsService } from '@/services/analyticsService';
 
