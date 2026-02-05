@@ -179,7 +179,7 @@ export const Tokens = () => {
 
     switch (provider) {
       case 'openai':
-        return `curl -X POST ${BASE_URL}/v1/chat/completions \\
+        return `curl -X POST ${BASE_URL}/proxy/v1/chat/completions \\
           ${baseHeaders} \\
           -d '{
             "model": "gpt-4",
@@ -188,7 +188,7 @@ export const Tokens = () => {
             ]
           }'`;
       case 'gemini':
-        return `curl -X POST ${BASE_URL}/v1beta/models/:model/generateContent \\
+        return `curl -X POST ${BASE_URL}/proxy/v1beta/models/:model/generateContent \\
           ${baseHeaders} \\
           -d '{
             "contents": [
@@ -204,7 +204,7 @@ export const Tokens = () => {
           }'`;
 
       case 'anthropic':
-        return `curl -X POST ${BASE_URL}/v1/messages \\
+        return `curl -X POST ${BASE_URL}/proxy/v1/messages \\
           ${baseHeaders} \\
           -d '{
             "model": "claude-3-sonnet-20240229",

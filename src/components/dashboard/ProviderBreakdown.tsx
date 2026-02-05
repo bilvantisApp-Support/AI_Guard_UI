@@ -172,7 +172,7 @@ export const ProviderBreakdown = ({ providers, loading = false }: ProviderBreakd
                       />
                       <Box display="flex" justifyContent="space-between" alignItems="center" mt={1}>
                         <Typography variant="caption" color="text.secondary">
-                          Cost: ${provider.cost.toFixed(2)}
+                          Cost: ${provider.cost.toFixed(4)}
                         </Typography>
                       </Box>
                     </Box>
