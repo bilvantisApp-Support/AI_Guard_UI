@@ -15,7 +15,7 @@ export interface Project {
   ownerId: string;
   memberCount: number;
   apiKeyCount: number;
-  role: 'owner' | 'admin' | 'member' | 'viewer';
+  role: 'owner' | 'admin' | 'member';
   members?: ProjectMember[];
   settings?: ProjectSettings;
   usage?: UsageMetrics;
@@ -49,7 +49,9 @@ export interface ProjectsResponse {
 
 export interface ProjectMember {
   userId: string;
-  role: 'owner' | 'admin' | 'member' | 'viewer';
+  name: string;
+  email: string;
+  role: 'owner' | 'admin' | 'member';
   addedAt: string;
 }
 
@@ -68,11 +70,12 @@ export interface ProjectSettings {
 
 export interface ApiKey {
   id: string;
+  keyId: string;
   projectId: string;
   name: string;
-  provider: 'openai' | 'anthropic' | 'google';
-  keyPrefix: string;
-  status: 'active' | 'inactive';
+  maskedKey: string;
+  provider: 'openai' | 'anthropic' | 'gemini';
+  isActive: true | false;
   lastUsed?: string;
   createdAt: string;
   updatedAt: string;

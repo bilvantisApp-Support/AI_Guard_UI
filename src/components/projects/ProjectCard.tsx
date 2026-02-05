@@ -66,14 +66,12 @@ export const ProjectCard = ({ project, onEdit, onDelete }: ProjectCardProps) => 
         return 'Admin';
       case 'member':
         return 'Member';
-      case 'viewer':
-        return 'Viewer';
       default:
         return role;
     }
   };
 
-  const userRole = project.role || 'viewer';
+  const userRole = project.role || 'member';
   const canEdit = userRole === 'owner' || userRole === 'admin';
   const canDelete = userRole === 'owner';
 

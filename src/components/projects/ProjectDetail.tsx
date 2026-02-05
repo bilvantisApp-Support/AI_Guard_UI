@@ -33,10 +33,15 @@ import {
   AccessTime as TimeIcon,
   AttachMoney as CostIcon,
 } from '@mui/icons-material';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { projectService } from '@/services/projectService';
 import { Project, ApiKey } from '@/types/api';
 import { formatDistanceToNow } from 'date-fns';
+import { useNotification } from '@/hooks/useNotification';
+import { AddApiKeyDialog } from './AddApiKeyDialog';
+import { InviteMemberDialog } from './InviteMemberDialog';
+import { useAuth } from '@/contexts/AuthContext';
+import { UpdateMemberDialog } from './UpdateMemberDialog';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -59,11 +64,29 @@ function TabPanel(props: TabPanelProps) {
   );
 }
 
+type UpdateMemberPayload = {
+  memberId: string,
+  role: 'admin' | 'member'
+}
+
 export const ProjectDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [tabValue, setTabValue] = useState(0);
+  const [openAddKey, setOpenAddKey] = useState(false);
+  const { user } = useAuth();
+  const { notify } = useNotification();
+  const [keyMenuAnchor, setKeyMenuAnchor] = useState<null | HTMLElement>(null);
+  const [selectedKeyId, setSelectedKeyId] = useState<string | null>(null);
+  const [memberMenuAnchor, setMemberMenuAnchor] = useState<null | HTMLElement>(null);
+  const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
+
+  const [openInviteMember, setOpenInviteMember] = useState(false);
+  const [openEditMember, setOpenEditMember] = useState(false);
+  const [editingMember, setEditingMember] = useState<any>(null);
+
 
   const {
     data: project,
@@ -94,9 +117,9 @@ export const ProjectDetail = () => {
     apiKeyCount: 2,
     role: 'owner',
     members: [
-      { userId: 'user1', role: 'owner', addedAt: '2024-07-01T00:00:00Z' },
-      { userId: 'user2', role: 'admin', addedAt: '2024-07-02T00:00:00Z' },
-      { userId: 'user3', role: 'member', addedAt: '2024-07-03T00:00:00Z' },
+      { userId: 'user1', role: 'owner', name: "John Doe", email: "john.doe@example.com", addedAt: '2024-07-01T00:00:00Z' },
+      { userId: 'user2', role: 'admin', name: "Jane Smith", email: "jane.smith@example.com", addedAt: '2024-07-02T00:00:00Z' },
+      { userId: 'user3', role: 'member', name: "Bob Johnson", email: "bob.johnson@example.com", addedAt: '2024-07-03T00:00:00Z' },
     ],
     settings: {
       rateLimiting: { enabled: true, maxRequests: 1000, windowMs: 60000 },
@@ -128,42 +151,52 @@ export const ProjectDetail = () => {
   const mockApiKeys: ApiKey[] = [
     {
       id: '1',
+      keyId:'key1',
       projectId: id || '1',
       name: 'OpenAI Production',
       provider: 'openai',
-      keyPrefix: 'sk-...abc123',
-      status: 'active',
+      maskedKey: 'sk-...abc123',
+      isActive: true,
       lastUsed: '2024-07-22T08:30:00Z',
       createdAt: '2024-07-01T00:00:00Z',
       updatedAt: '2024-07-01T00:00:00Z',
     },
     {
       id: '2',
+      keyId:'key2',
       projectId: id || '1',
       name: 'Anthropic Backup',
       provider: 'anthropic',
-      keyPrefix: 'sk-...def456',
-      status: 'active',
+      maskedKey: 'sk-...def456',
+      isActive: true,
       lastUsed: '2024-07-21T14:20:00Z',
       createdAt: '2024-07-02T00:00:00Z',
       updatedAt: '2024-07-02T00:00:00Z',
     },
     {
       id: '3',
+      keyId:'key3',
       projectId: id || '1',
       name: 'Google Testing',
-      provider: 'google',
-      keyPrefix: 'AIz...ghi789',
-      status: 'inactive',
+      provider: 'gemini',
+      maskedKey: 'AIz...ghi789',
+      isActive: false,
       createdAt: '2024-07-03T00:00:00Z',
       updatedAt: '2024-07-03T00:00:00Z',
     },
   ];
 
   const displayProject = projectError ? mockProject : project;
-  const displayApiKeys = Array.isArray(projectError ? mockApiKeys : apiKeys) 
-    ? (projectError ? mockApiKeys : apiKeys) 
+  const displayApiKeys = Array.isArray(projectError ? mockApiKeys : apiKeys)
+    ? (projectError ? mockApiKeys : apiKeys)
     : mockApiKeys;
+
+  const currentMember = displayProject?.members?.find((m) => m.email == user?.email);
+  const currentUserRole = currentMember?.role;
+
+  const isOwner = currentUserRole === 'owner';
+  const isAdmin = currentUserRole === 'admin';
+  const isOwnerOrAdmin = isOwner || isAdmin;
 
   const handleMenuClick = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
@@ -173,14 +206,155 @@ export const ProjectDetail = () => {
     setAnchorEl(null);
   };
 
+  const handleKeyMenuOpen = (
+    event: React.MouseEvent<HTMLElement>,
+    keyId: string
+  ) => {
+    setKeyMenuAnchor(event.currentTarget);
+    setSelectedKeyId(keyId);
+  };
+
+  const handleKeyMenuClose = () => {
+    setKeyMenuAnchor(null);
+    setSelectedKeyId(null);
+  };
+
+
+  const handleMemberMenuOpen = (
+    event: React.MouseEvent<HTMLElement>,
+    memberId: string
+  ) => {
+    setMemberMenuAnchor(event.currentTarget);
+    setSelectedMemberId(memberId);
+  };
+
+  const handleMemberMenuClose = () => {
+    setMemberMenuAnchor(null);
+    setSelectedMemberId(null);
+  };
+
+  //Add API key mutation
+  const addKeyMutation = useMutation({
+    mutationFn: (data: { provider: 'openai' | 'anthropic' | 'gemini'; apiKey: string }) =>
+      projectService.addProjectKey(id!, { provider: data.provider, apiKey: data.apiKey }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['project-keys', id] });
+      notify('API key added successfully', { type: 'success' });
+      setOpenAddKey(false);
+    },
+    onError: (error: any) => {
+      notify(
+        error?.response?.data?.error?.message || 'Failed to add API key',
+        { type: 'error' }
+      );
+    },
+
+  });
+
+  const handleAddApiKey = async (data: {
+    provider: 'openai' | 'anthropic' | 'gemini';
+    apiKey: string;
+  }) => {
+    await addKeyMutation.mutateAsync(data);
+  };
+
+  //Delete API key mutation
+
+  const deleteKeyMutation = useMutation({
+    mutationFn: (keyId: string) =>
+      projectService.deleteProjectKey(id!, keyId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['project-keys', id] });
+      notify('API key deleted successfully', { type: 'success' });
+    },
+    onError: () => {
+      notify('Failed to delete API key', { type: 'error' });
+    },
+  });
+
+  const deleteApiKey = async (keyId: string) => {
+    await deleteKeyMutation.mutateAsync(keyId);
+  }
+
+
+  //Invite member mutation
+  const inviteMemberMutation = useMutation({
+    mutationFn: (data: {
+      email: string;
+      role: 'admin' | 'member';
+    }) => projectService.addProjectMember(id!, data),
+
+    onSuccess: (res) => {
+      const data = res.member;
+      queryClient.invalidateQueries({ queryKey: ['project', id] });
+      notify(`Invited ${data.name}`, { type: 'success' });
+      setOpenInviteMember(false);
+    },
+
+    onError: (error: any) => {
+      notify(
+        error?.response?.data?.error?.message || 'Failed to invite member',
+        { type: 'error' }
+      );
+    },
+  });
+
+  const inviteMember = async (data: {
+    email: string;
+    role:  'admin' | 'member';
+  }) => {
+    await inviteMemberMutation.mutateAsync(data);
+  };
+
+
+  //Remove member mutation
+  const removeMemberMutation = useMutation({
+    mutationFn: (memberId: string) =>
+      projectService.removeProjectMember(id!, memberId),
+
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['project', id] });
+      notify('Member removed successfully', { type: 'success' });
+      handleMemberMenuClose();
+    },
+
+    onError: () => {
+      notify('Failed to remove member', { type: 'error' });
+    },
+  });
+
+  const removeMember = async (memberId: string) => {
+    await removeMemberMutation.mutateAsync(memberId);
+  }
+  //Remove member mutation
+  const updateMemberMutation = useMutation({
+    mutationFn: ({ memberId, role }: UpdateMemberPayload) =>
+      projectService.updateProjectMember(id!, memberId, { role }),
+
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['project', id] });
+      notify('Member Updated successfully', { type: 'success' });
+      handleMemberMenuClose();
+    },
+
+    onError: () => {
+      notify('Failed to Update member', { type: 'error' });
+    },
+  });
+
+  const updateMember = async ({ memberId, role }: UpdateMemberPayload) => {
+    await updateMemberMutation.mutateAsync({ memberId, role });
+  }
+
+
   const getProviderInfo = (provider: string) => {
     switch (provider) {
       case 'openai':
         return { name: 'OpenAI', color: '#00A67E' };
       case 'anthropic':
         return { name: 'Anthropic', color: '#D97757' };
-      case 'google':
-        return { name: 'Google', color: '#4285F4' };
+      case 'gemini':
+        return { name: 'Gemini', color: '#4285F4' };
       default:
         return { name: provider, color: '#9E9E9E' };
     }
@@ -193,8 +367,6 @@ export const ProjectDetail = () => {
       case 'admin':
         return 'secondary';
       case 'member':
-        return 'default';
-      case 'viewer':
         return 'default';
       default:
         return 'default';
@@ -283,18 +455,18 @@ export const ProjectDetail = () => {
             <Typography variant="body1" paragraph>
               {displayProject.description || 'No description provided.'}
             </Typography>
-            
+
             <Box display="flex" gap={2} mb={2}>
               <Chip label={`${displayProject.memberCount || displayProject.members?.length || 0} members`} icon={<PersonIcon />} />
               <Chip label={`${displayApiKeys.length} API keys`} icon={<KeyIcon />} />
-              <Chip 
-                label="Active" 
-                color="success" 
+              <Chip
+                label="Active"
+                color="success"
                 variant="outlined"
               />
             </Box>
           </Grid>
-          
+
           <Grid item xs={12} md={4}>
             <Typography variant="h6" gutterBottom>
               Settings
@@ -339,11 +511,14 @@ export const ProjectDetail = () => {
         <TabPanel value={tabValue} index={0}>
           <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
             <Typography variant="h6">API Keys</Typography>
-            <Button variant="contained" startIcon={<AddIcon />}>
+            <Button variant="contained" startIcon={<AddIcon />} onClick={() => {
+              if (!isOwnerOrAdmin) return;
+              setOpenAddKey(true);
+            }}>
               Add API Key
             </Button>
           </Box>
-          
+
           {displayApiKeys.length === 0 ? (
             <Box
               display="flex"
@@ -369,14 +544,18 @@ export const ProjectDetail = () => {
                     secondaryAction={
                       <Box display="flex" alignItems="center" gap={1}>
                         <Chip
-                          label={key.status}
+                          label={key.isActive === true ? 'Active' : 'Inactive'}
                           size="small"
-                          color={key.status === 'active' ? 'success' : 'default'}
+                          color={key.isActive === true ? 'success' : 'default'}
                           variant="outlined"
                         />
-                        <IconButton size="small">
+                        <IconButton
+                          size="small"
+                          onClick={(e) => handleKeyMenuOpen(e, key.keyId)}
+                        >
                           <MoreIcon />
                         </IconButton>
+
                       </Box>
                     }
                   >
@@ -390,7 +569,10 @@ export const ProjectDetail = () => {
                       secondary={
                         <Box>
                           <Typography variant="body2" color="text.secondary">
-                            {provider.name} • {key.keyPrefix}
+                            {provider.name}
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            {key.maskedKey}
                           </Typography>
                           {key.lastUsed && (
                             <Typography variant="caption" color="text.secondary">
@@ -410,11 +592,14 @@ export const ProjectDetail = () => {
         <TabPanel value={tabValue} index={1}>
           <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
             <Typography variant="h6">Team Members</Typography>
-            <Button variant="contained" startIcon={<AddIcon />}>
+            <Button variant="contained" startIcon={<AddIcon />} onClick={() => {
+              if (!isOwnerOrAdmin) return;
+              setOpenInviteMember(true);
+            }}>
               Invite Member
             </Button>
           </Box>
-          
+
           <List>
             {displayProject.members?.map((member, index) => (
               <ListItem
@@ -429,7 +614,8 @@ export const ProjectDetail = () => {
                       variant="outlined"
                     />
                     {member.role !== 'owner' && (
-                      <IconButton size="small">
+                      <IconButton size="small" onClick={(e) => handleMemberMenuOpen(e, member.userId)}>
+
                         <MoreIcon />
                       </IconButton>
                     )}
@@ -438,11 +624,11 @@ export const ProjectDetail = () => {
               >
                 <ListItemAvatar>
                   <Avatar>
-                    {String.fromCharCode(65 + index)}
+                    {member.name ? member.name.charAt(0).toUpperCase() : '?'}
                   </Avatar>
                 </ListItemAvatar>
                 <ListItemText
-                  primary={`User ${index + 1}`}
+                  primary={member.name}
                   secondary={
                     <Typography variant="body2" color="text.secondary">
                       Added {formatDistanceToNow(new Date(member.addedAt), { addSuffix: true })}
@@ -458,7 +644,7 @@ export const ProjectDetail = () => {
           <Typography variant="h6" gutterBottom>
             Usage Analytics
           </Typography>
-          
+
           {displayProject.usage ? (
             <Box>
               <Grid container spacing={3}>
@@ -594,6 +780,98 @@ export const ProjectDetail = () => {
           Delete Project
         </MenuItem>
       </Menu>
+
+      {/* Remove API key menu */}
+      {isOwnerOrAdmin && (
+        <Menu
+          anchorEl={keyMenuAnchor}
+          open={Boolean(keyMenuAnchor)}
+          onClose={handleKeyMenuClose}
+        >
+          <MenuItem
+            onClick={async () => {
+              if (selectedKeyId) {
+                await deleteApiKey(selectedKeyId);
+              }
+              handleKeyMenuClose();
+            }}
+            sx={{ color: 'error.main' }}
+          >
+            Delete Key
+          </MenuItem>
+        </Menu>
+      )}
+
+
+      {/* Update and Remove Member menu */}
+      {isOwnerOrAdmin && (
+        <Menu
+          anchorEl={memberMenuAnchor}
+          open={Boolean(memberMenuAnchor)}
+          onClose={handleMemberMenuClose}
+        >
+          <MenuItem
+            onClick={() => {
+              const member = displayProject.members?.find(
+                (m) => m.userId === selectedMemberId
+              );
+              setEditingMember(member);
+              setOpenEditMember(true);
+              handleMemberMenuClose();
+            }}
+          >
+            Update Member
+          </MenuItem>
+
+          <MenuItem
+            onClick={async () => {
+              if (selectedMemberId) {
+                await removeMember(selectedMemberId);
+              }
+              handleMemberMenuClose();
+            }}
+            sx={{ color: 'error.main' }}
+          >
+            Remove Member
+          </MenuItem>
+
+        </Menu>
+      )}
+
+
+      <AddApiKeyDialog
+        open={openAddKey}
+        onClose={() => setOpenAddKey(false)}
+        existingKeys={displayApiKeys}
+        loading={addKeyMutation.isPending}
+        onSubmit={handleAddApiKey}
+      />
+
+      <InviteMemberDialog
+        open={openInviteMember}
+        onClose={() => setOpenInviteMember(false)}
+        loading={inviteMemberMutation.isPending}
+        onSubmit={inviteMember}
+      />
+
+      {editingMember && (
+        <UpdateMemberDialog
+          open={openEditMember}
+          onClose={() => setOpenEditMember(false)}
+          projectName={displayProject.name}
+          memberName={editingMember.name}
+          currentRole={editingMember.role}
+          loading={updateMemberMutation.isPending}
+          onSubmit={async (role) => {
+            await updateMember({
+              memberId: editingMember.userId,
+              role,
+            });
+          }}
+        />
+      )}
+
+
     </Box>
   );
 };

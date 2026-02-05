@@ -79,9 +79,9 @@ export const ProjectList = () => {
       apiKeyCount: 2,
       role: 'owner',
       members: [
-        { userId: 'user1', role: 'owner', addedAt: '2024-07-01T00:00:00Z' },
-        { userId: 'user2', role: 'admin', addedAt: '2024-07-02T00:00:00Z' },
-        { userId: 'user3', role: 'member', addedAt: '2024-07-03T00:00:00Z' },
+        { userId: 'user1', role: 'owner', name: "John Doe", email: "john.doe@example.com", addedAt: '2024-07-01T00:00:00Z' },
+        { userId: 'user2', role: 'admin', name: "Jane Smith", email: "jane.smith@example.com", addedAt: '2024-07-02T00:00:00Z' },
+        { userId: 'user3', role: 'member', name: "Bob Johnson", email: "bob.johnson@example.com", addedAt: '2024-07-03T00:00:00Z' },
       ],
       settings: {
         rateLimiting: { enabled: true, maxRequests: 1000, windowMs: 60000 },
@@ -100,13 +100,13 @@ export const ProjectList = () => {
       apiKeyCount: 1,
       role: 'owner',
       members: [
-        { userId: 'user1', role: 'owner', addedAt: '2024-07-05T00:00:00Z' },
-        { userId: 'user4', role: 'member', addedAt: '2024-07-06T00:00:00Z' },
+        { userId: 'user1', role: 'owner', name: "John Doe", email: "john.doe@example.com", addedAt: '2024-07-05T00:00:00Z' },
+        { userId: 'user4', role: 'member', name: "John Doe", email: "john.doe@example.com", addedAt: '2024-07-06T00:00:00Z' },
       ],
       settings: {
         rateLimiting: { enabled: true, maxRequests: 500, windowMs: 60000 },
         quotas: { daily: 5000, monthly: 150000 },
-        allowedProviders: ['openai', 'google'],
+        allowedProviders: ['openai', 'gemini'],
       },
       createdAt: '2024-07-05T00:00:00Z',
       updatedAt: '2024-07-21T14:20:00Z',
@@ -120,7 +120,7 @@ export const ProjectList = () => {
       apiKeyCount: 1,
       role: 'owner',
       members: [
-        { userId: 'user1', role: 'owner', addedAt: '2024-07-10T00:00:00Z' },
+        { userId: 'user1', role: 'owner', name: "John Doe", email: "john.doe@example.com", addedAt: '2024-07-10T00:00:00Z' },
       ],
       settings: {
         rateLimiting: { enabled: true, maxRequests: 200, windowMs: 60000 },
@@ -133,10 +133,10 @@ export const ProjectList = () => {
   ];
 
   const displayProjects = error ? mockProjects : (projects || []);
-  
+
   // Ensure displayProjects is always an array
   const safeDisplayProjects = Array.isArray(displayProjects) ? displayProjects : [];
-  
+
   // Debug logging to help troubleshoot the issue
   if (!Array.isArray(displayProjects)) {
     console.error('displayProjects is not an array:', {
@@ -146,7 +146,7 @@ export const ProjectList = () => {
       type: typeof displayProjects
     });
   }
-  
+
   const filteredProjects = safeDisplayProjects.filter((project) =>
     project.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     (project.description && project.description.toLowerCase().includes(searchTerm.toLowerCase()))
@@ -160,11 +160,13 @@ export const ProjectList = () => {
       return;
     }
     await createMutation.mutateAsync(data);
+   
+
   };
 
   const handleDeleteProject = async () => {
     if (!deleteDialog.project) return;
-    
+
     if (error) {
       // Simulate deletion in demo mode
       notify('Demo mode: Project would be deleted in real implementation', { type: 'info' });
@@ -173,6 +175,8 @@ export const ProjectList = () => {
     }
 
     await deleteMutation.mutateAsync(deleteDialog.project.id);
+    
+
     setDeleteDialog({ open: false });
   };
 

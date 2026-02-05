@@ -157,12 +157,12 @@ export const Profile = () => {
             </Box>
 
             <Box display="flex" alignItems="center" gap={3} mb={4}>
-              <Avatar 
-                sx={{ 
-                  width: 80, 
-                  height: 80, 
+              <Avatar
+                sx={{
+                  width: 80,
+                  height: 80,
                   fontSize: '2rem',
-                  bgcolor: 'primary.main' 
+                  bgcolor: 'primary.main'
                 }}
               >
                 {user.name?.[0] || user.email?.[0] || 'U'}
@@ -182,7 +182,10 @@ export const Profile = () => {
                     variant="outlined"
                   />
                   <Typography variant="caption" color="text.secondary">
-                    Member since {formatDistanceToNow(new Date(user.createdAt), { addSuffix: true })}
+                    Member since{' '}
+                    {user.createdAt
+                      ? formatDistanceToNow(new Date(user.createdAt), { addSuffix: true })
+                      : '—'}
                   </Typography>
                 </Box>
               </Box>

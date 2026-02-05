@@ -29,13 +29,10 @@ export const UsageChart = ({ data, loading = false }: UsageChartProps) => {
   };
 
   const formatTooltipValue = (value: number, name: string) => {
-    if (name === 'cost') {
-      return [`$${value.toFixed(2)}`, 'Cost'];
-    }
-    if (name === 'tokens') {
-      return [value.toLocaleString(), 'Tokens'];
-    }
-    return [value.toLocaleString(), 'Requests'];
+    if (name === 'cost') return [`$${value.toFixed(4)}`, 'Cost ($)'];
+    if (name === 'tokens') return [value.toLocaleString(), 'Tokens'];
+    if (name === 'requests') return [value.toLocaleString(), 'Requests'];
+    return [value, name];
   };
 
   if (loading) {

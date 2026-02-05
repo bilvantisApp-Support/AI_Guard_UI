@@ -7,6 +7,12 @@ export interface User {
   updatedAt: string;
 }
 
+export interface APIUser {
+  id: string;
+  name: string;
+  email: string;
+}
+
 export interface AuthState {
   user: User | null;
   loading: boolean;
@@ -18,6 +24,7 @@ export interface PersonalAccessToken {
   name: string;
   token?: string; // Only present during creation, not in list responses
   scopes: string[];
+  llmProvider?: 'openai' | 'anthropic' | 'gemini';
   projectId?: string;
   lastUsedAt?: string | null;
   expiresAt?: string | null;
@@ -33,13 +40,15 @@ export interface TokensResponse {
 export interface CreateTokenRequest {
   name: string;
   scopes: string[];
+  llmProvider?: 'openai' | 'anthropic' | 'gemini';
   projectId?: string;
+  userId?: string;
   expiresInDays?: number;
 }
 
 export const TOKEN_SCOPES = [
   'api:read',
-  'api:write', 
+  'api:write',
   'projects:read',
   'projects:write',
   'users:read',

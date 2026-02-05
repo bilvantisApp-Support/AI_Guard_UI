@@ -8,7 +8,7 @@ A modern, enterprise-grade web interface for the AI Guard API management platfor
 - **Firebase Authentication**: Secure user authentication with multiple providers
 - **Personal Access Tokens (PAT)**: Generate scoped tokens for programmatic access
 - **Token Rotation**: Secure token refresh mechanism for enhanced security
-- **Role-Based Access**: Owner, admin, member, and viewer permissions
+- **Role-Based Access**: Owner, admin, member permissions
 - **API Key Protection**: Encrypted storage with masked display for security
 
 ### 🚀 Project Management
