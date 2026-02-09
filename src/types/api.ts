@@ -23,6 +23,11 @@ export interface Project {
   updatedAt: string;
 }
 
+export interface UpdateProject{
+  name?: string;
+  settings?:ProjectSettings;
+}
+
 export interface UsageMetrics {
   total?: {
     cost: number;
@@ -56,14 +61,15 @@ export interface ProjectMember {
 }
 
 export interface ProjectSettings {
-  rateLimiting?: {
+  plan?: 'free' | 'pro' | 'enterprise' | 'custom',
+  rateLimitOverride?: {
     enabled: boolean;
     maxRequests: number;
     windowMs: number;
   };
-  quotas?: {
-    daily?: number;
-    monthly?: number;
+  quotaOverride?: {
+    dailyLimit?: number;
+    monthlyLimit?: number;
   };
   allowedProviders?: string[];
 }
@@ -91,14 +97,25 @@ export interface Usage {
 }
 
 export interface UsageStats {
-  daily: Usage[];
-  monthly: Usage[];
-  total: {
     requests: number;
     tokens: number;
     cost: number;
+};
+
+export interface ProjectUsageResponse {
+  projectId: string;
+  period: {
+    start: string;
+    end: string;
   };
+  totalRequests: number;
+  totalTokens: number;
+  totalCost: number;
+  byProvider: Record<string, UsageStats>;
+  byModel: Record<string, UsageStats>;
+  byUser: Record<string, UsageStats>;
 }
+
 
 export interface QuotaStatus {
   daily: {

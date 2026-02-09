@@ -35,7 +35,7 @@ import {
 } from '@mui/icons-material';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { projectService } from '@/services/projectService';
-import { Project, ApiKey } from '@/types/api';
+import { Project, ApiKey, ProjectUsageResponse } from '@/types/api';
 import { formatDistanceToNow } from 'date-fns';
 import { useNotification } from '@/hooks/useNotification';
 import { AddApiKeyDialog } from './AddApiKeyDialog';
@@ -100,12 +100,21 @@ export const ProjectDetail = () => {
 
   const {
     data: apiKeys = [],
-    // isLoading: keysLoading,
   } = useQuery<ApiKey[]>({
     queryKey: ['project-keys', id],
     queryFn: () => projectService.getProjectKeys(id!),
     enabled: !!id,
   });
+
+  const {
+    data: projectUsage,
+    isLoading: usageLoading,
+  } = useQuery<ProjectUsageResponse>({
+    queryKey: ['project-usage', id],
+    queryFn: () => projectService.getProjectUsage(id!),
+    enabled: !id,
+  });
+
 
   // Mock data fallback
   const mockProject: Project = {
@@ -122,8 +131,9 @@ export const ProjectDetail = () => {
       { userId: 'user3', role: 'member', name: "Bob Johnson", email: "bob.johnson@example.com", addedAt: '2024-07-03T00:00:00Z' },
     ],
     settings: {
-      rateLimiting: { enabled: true, maxRequests: 1000, windowMs: 60000 },
-      quotas: { daily: 10000, monthly: 300000 },
+      rateLimitOverride: { enabled: true, maxRequests: 1000, windowMs: 60000 },
+      quotaOverride
+: { dailyLimit: 10000, monthlyLimit: 300000 },
       allowedProviders: ['openai', 'anthropic'],
     },
     usage: {
@@ -151,7 +161,7 @@ export const ProjectDetail = () => {
   const mockApiKeys: ApiKey[] = [
     {
       id: '1',
-      keyId:'key1',
+      keyId: 'key1',
       projectId: id || '1',
       name: 'OpenAI Production',
       provider: 'openai',
@@ -163,7 +173,7 @@ export const ProjectDetail = () => {
     },
     {
       id: '2',
-      keyId:'key2',
+      keyId: 'key2',
       projectId: id || '1',
       name: 'Anthropic Backup',
       provider: 'anthropic',
@@ -175,7 +185,7 @@ export const ProjectDetail = () => {
     },
     {
       id: '3',
-      keyId:'key3',
+      keyId: 'key3',
       projectId: id || '1',
       name: 'Google Testing',
       provider: 'gemini',
@@ -301,7 +311,7 @@ export const ProjectDetail = () => {
 
   const inviteMember = async (data: {
     email: string;
-    role:  'admin' | 'member';
+    role: 'admin' | 'member';
   }) => {
     await inviteMemberMutation.mutateAsync(data);
   };
@@ -372,6 +382,20 @@ export const ProjectDetail = () => {
         return 'default';
     }
   };
+
+  const getDailyQuotaRemaining = (project: Project) => {
+    if (!project) return '—';
+
+    const dailyLimit = project.settings?.quotaOverride?.dailyLimit;
+    const dailyUsed = project.usage?.currentDay?.requests ?? 0;
+
+    if (!dailyLimit) return 'Unlimited';
+
+    const remaining = Math.max(0, dailyLimit - dailyUsed);
+
+    return `${remaining} / ${dailyLimit}`;
+  };
+
 
   if (projectLoading) {
     return (
@@ -476,8 +500,8 @@ export const ProjectDetail = () => {
                 <ListItemText
                   primary="Rate Limiting"
                   secondary={
-                    displayProject.settings?.rateLimiting?.enabled
-                      ? `${displayProject.settings.rateLimiting.maxRequests} requests/minute`
+                    displayProject.settings?.rateLimitOverride?.maxRequests
+                      ? `${displayProject.settings.rateLimitOverride.maxRequests} requests/minute`
                       : 'Disabled'
                   }
                 />
@@ -485,7 +509,7 @@ export const ProjectDetail = () => {
               <ListItem>
                 <ListItemText
                   primary="Daily Quota"
-                  secondary={displayProject.settings?.quotas?.daily?.toLocaleString() || 'Unlimited'}
+                  secondary={getDailyQuotaRemaining(displayProject)}
                 />
               </ListItem>
               <ListItem>
@@ -505,6 +529,7 @@ export const ProjectDetail = () => {
             <Tab label="API Keys" />
             <Tab label="Team Members" />
             <Tab label="Usage Analytics" />
+            <Tab label="Member Usage Analytics" />
           </Tabs>
         </Box>
 
@@ -764,6 +789,75 @@ export const ProjectDetail = () => {
             </Box>
           )}
         </TabPanel>
+        <TabPanel value={tabValue} index={3}>
+          <Typography variant="h6" gutterBottom>
+            Member Usage Analytics
+          </Typography>
+
+          {usageLoading ? (
+            <Skeleton variant="rectangular" height={200} />
+          ) : (
+            <Grid container spacing={3}>
+              {displayProject.members?.map((member) => {
+                const usage = projectUsage?.byUser?.[member.userId] ?? {
+                  requests: 0,
+                  tokens: 0,
+                  cost: 0,
+                };
+
+                return (
+                  <Grid item xs={12} md={6} key={member.userId}>
+                    <Paper sx={{ p: 3 }}>
+                      <Box display="flex" alignItems="center" mb={2}>
+                        <Avatar sx={{ mr: 2 }}>
+                          {member.name.charAt(0).toUpperCase()}
+                        </Avatar>
+                        <Box>
+                          <Typography fontWeight={600}>
+                            {member.name}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            {member.email}
+                          </Typography>
+                        </Box>
+                      </Box>
+
+                      <Grid container spacing={2}>
+                        <Grid item xs={4}>
+                          <Typography variant="body2" color="text.secondary">
+                            Requests
+                          </Typography>
+                          <Typography fontWeight={600}>
+                            {usage.requests}
+                          </Typography>
+                        </Grid>
+
+                        <Grid item xs={4}>
+                          <Typography variant="body2" color="text.secondary">
+                            Tokens
+                          </Typography>
+                          <Typography fontWeight={600}>
+                            {usage.tokens}
+                          </Typography>
+                        </Grid>
+
+                        <Grid item xs={4}>
+                          <Typography variant="body2" color="text.secondary">
+                            Cost
+                          </Typography>
+                          <Typography fontWeight={600}>
+                            ${usage.cost.toFixed(4)}
+                          </Typography>
+                        </Grid>
+                      </Grid>
+                    </Paper>
+                  </Grid>
+                );
+              })}
+            </Grid>
+          )}
+        </TabPanel>
+
       </Paper>
 
       <Menu

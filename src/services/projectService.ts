@@ -1,5 +1,5 @@
 import { apiClient } from './api';
-import { Project, ProjectsResponse, ApiKey, ApiKeysResponse, UsageStats, QuotaStatus, ProjectMember } from '@/types/api';
+import { Project, ProjectsResponse, ApiKey, ApiKeysResponse, QuotaStatus, ProjectMember, ProjectUsageResponse, UpdateProject } from '@/types/api';
 
 export const projectService = {
   async getProjects(): Promise<Project[]> {
@@ -15,7 +15,7 @@ export const projectService = {
     return apiClient.post<Project>('/_api/projects', data);
   },
 
-  async updateProject(id: string, data: Partial<Project>): Promise<Project> {
+  async updateProject(id: string, data: UpdateProject): Promise<Project> {
     return apiClient.put<Project>(`/_api/projects/${id}`, data);
   },
 
@@ -61,8 +61,8 @@ export const projectService = {
   async getProjectUsage(
     projectId: string,
     params?: { startDate?: string; endDate?: string; groupBy?: string }
-  ): Promise<UsageStats> {
-    return apiClient.get<UsageStats>(`/_api/projects/${projectId}/usage`, { params });
+  ): Promise<ProjectUsageResponse> {
+    return apiClient.get<ProjectUsageResponse>(`/_api/projects/${projectId}/usage`, { params });
   },
 
   async getProjectQuota(projectId: string): Promise<QuotaStatus> {

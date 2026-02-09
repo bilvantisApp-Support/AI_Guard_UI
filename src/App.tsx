@@ -82,6 +82,7 @@ function App() {
                 <Route path="projects" element={<ProjectList />} />
                 <Route path="projects/:id" element={<ProjectDetail />} />
                 <Route path="analytics" element={<Analytics />} />
+                <Route path="projects/:id/analytics" element={<Analytics />} />
                 <Route path="teams" element={<Teams />} />
                 <Route path="tokens" element={<Tokens />} />
                 <Route path="profile" element={<Profile />} />

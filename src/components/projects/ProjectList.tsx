@@ -24,7 +24,8 @@ import { ProjectCard } from './ProjectCard';
 import { CreateProjectDialog } from './CreateProjectDialog';
 import { projectService } from '@/services/projectService';
 import { useNotification } from '@/hooks/useNotification';
-import { Project } from '@/types/api';
+import { Project, UpdateProject } from '@/types/api';
+import { EditProjectDialog } from './EditProjectDialog';
 
 export const ProjectList = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -32,6 +33,8 @@ export const ProjectList = () => {
   const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; project?: Project }>({
     open: false,
   });
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editingProject, setEditingProject] = useState<Project | null>(null);
 
   const { notify } = useNotification();
   const queryClient = useQueryClient();
@@ -54,6 +57,24 @@ export const ProjectList = () => {
     },
     onError: (error: any) => {
       notify(error.message || 'Failed to create project', { type: 'error' });
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: UpdateProject }) =>
+      projectService.updateProject(id, data),
+
+    onSuccess: (_res, vars) => {
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
+      queryClient.invalidateQueries({ queryKey: ['project', vars.id] });
+      notify('Project updated successfully', { type: 'success' });
+    },
+
+    onError: (error: any) => {
+      notify(
+        error?.response?.data?.error?.message || 'Failed to update project',
+        { type: 'error' }
+      );
     },
   });
 
@@ -84,8 +105,8 @@ export const ProjectList = () => {
         { userId: 'user3', role: 'member', name: "Bob Johnson", email: "bob.johnson@example.com", addedAt: '2024-07-03T00:00:00Z' },
       ],
       settings: {
-        rateLimiting: { enabled: true, maxRequests: 1000, windowMs: 60000 },
-        quotas: { daily: 10000, monthly: 300000 },
+        rateLimitOverride: { enabled: true, maxRequests: 1000, windowMs: 60000 },
+        quotaOverride: { dailyLimit: 10000, monthlyLimit: 300000 },
         allowedProviders: ['openai', 'anthropic'],
       },
       createdAt: '2024-07-01T00:00:00Z',
@@ -104,8 +125,8 @@ export const ProjectList = () => {
         { userId: 'user4', role: 'member', name: "John Doe", email: "john.doe@example.com", addedAt: '2024-07-06T00:00:00Z' },
       ],
       settings: {
-        rateLimiting: { enabled: true, maxRequests: 500, windowMs: 60000 },
-        quotas: { daily: 5000, monthly: 150000 },
+        rateLimitOverride: { enabled: true, maxRequests: 500, windowMs: 60000 },
+        quotaOverride: { dailyLimit: 5000, monthlyLimit: 150000 },
         allowedProviders: ['openai', 'gemini'],
       },
       createdAt: '2024-07-05T00:00:00Z',
@@ -123,8 +144,8 @@ export const ProjectList = () => {
         { userId: 'user1', role: 'owner', name: "John Doe", email: "john.doe@example.com", addedAt: '2024-07-10T00:00:00Z' },
       ],
       settings: {
-        rateLimiting: { enabled: true, maxRequests: 200, windowMs: 60000 },
-        quotas: { daily: 2000, monthly: 60000 },
+        rateLimitOverride: { enabled: true, maxRequests: 200, windowMs: 60000 },
+        quotaOverride: { dailyLimit: 2000, monthlyLimit: 60000 },
         allowedProviders: ['anthropic'],
       },
       createdAt: '2024-07-10T00:00:00Z',
@@ -160,7 +181,7 @@ export const ProjectList = () => {
       return;
     }
     await createMutation.mutateAsync(data);
-   
+
 
   };
 
@@ -175,15 +196,28 @@ export const ProjectList = () => {
     }
 
     await deleteMutation.mutateAsync(deleteDialog.project.id);
-    
+
 
     setDeleteDialog({ open: false });
   };
 
-  const handleEditProject = (project: Project) => {
-    // Edit dialog functionality would go here
-    console.log('Edit project:', project);
+  const handleEditMenuOpen = (project: Project) => {
+    setEditingProject(project);
+    setEditDialogOpen(true);
+  }
+
+  const handleEditProject = async (data: UpdateProject) => {
+    if (!editingProject) return;
+
+    await updateMutation.mutateAsync({
+      id: editingProject.id,
+      data,
+    });
+
+    setEditDialogOpen(false);
+    setEditingProject(null);
   };
+
 
   if (isLoading) {
     return (
@@ -273,7 +307,7 @@ export const ProjectList = () => {
             <Grid item xs={12} sm={6} lg={4} key={project.id}>
               <ProjectCard
                 project={project}
-                onEdit={handleEditProject}
+                onEdit={handleEditMenuOpen}
                 onDelete={(projectId) =>
                   setDeleteDialog({
                     open: true,
@@ -302,6 +336,20 @@ export const ProjectList = () => {
         loading={createMutation.isPending}
       />
 
+      {editingProject && (
+        <EditProjectDialog
+          open={editDialogOpen}
+          project={editingProject}
+          onClose={() => {
+            setEditDialogOpen(false);
+            setEditingProject(null);
+          }}
+          onSubmit={handleEditProject}
+          loading={updateMutation.isPending}
+        />
+      )}
+
+
       <Dialog
         open={deleteDialog.open}
         onClose={() => setDeleteDialog({ open: false })}
@@ -309,7 +357,7 @@ export const ProjectList = () => {
         <DialogTitle>Delete Project</DialogTitle>
         <DialogContent>
           <Typography>
-            Are you sure you want to delete "{deleteDialog.project?.name}"? 
+            Are you sure you want to delete "{deleteDialog.project?.name}"?
             This action cannot be undone and will remove all associated API keys and data.
           </Typography>
         </DialogContent>

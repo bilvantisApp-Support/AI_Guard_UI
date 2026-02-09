@@ -7,11 +7,15 @@ import {
   Button,
   Box,
   MenuItem,
+  Autocomplete,
 } from '@mui/material';
-import { useForm } from 'react-hook-form';
+import { Controller, useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
-import { useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { userService } from '@/services/userService';
+import { APIUser } from '@/types/user';
 
 interface FormData {
   email: string;
@@ -42,17 +46,35 @@ export const InviteMemberDialog = ({
   onSubmit,
   loading,
 }: InviteMemberDialogProps) => {
+  const [search, setSearch] = useState('');
   const {
     register,
     handleSubmit,
     formState: { errors },
     reset,
+    control
   } = useForm<FormData>({
     resolver: yupResolver(schema),
     defaultValues: {
       role: 'member',
     },
   });
+
+  const { data: users = [], isLoading } = useQuery<APIUser[]>({
+    queryKey: ['users'],
+    queryFn: userService.getActiveUsers,
+    enabled: open,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const filteredUsers = useMemo(() => {
+    if (!search) return users;
+    return users.filter(
+      (u) =>
+        u.name.toLowerCase().includes(search.toLowerCase()) ||
+        u.email.toLowerCase().includes(search.toLowerCase())
+    );
+  }, [search, users]);
 
   const handleFormSubmit = async (data: FormData) => {
     await onSubmit(data);
@@ -77,13 +99,39 @@ export const InviteMemberDialog = ({
 
       <DialogContent>
         <Box display="flex" flexDirection="column" gap={3} pt={1}>
-          <TextField
-            label="Email"
-            fullWidth
-            {...register('email')}
-            error={!!errors.email}
-            helperText={errors.email?.message}
+          <Controller
+            name="email"
+            control={control}
+            render={({ field }) => (
+              <Autocomplete
+                freeSolo
+                loading={isLoading}
+                options={filteredUsers}
+                getOptionLabel={(option) =>
+                  typeof option === 'string'
+                    ? option
+                    : `${option.name} (${option.email})`
+                }
+                onInputChange={(_, value) => setSearch(value)}
+                onChange={(_, value) => {
+                  if (typeof value === 'string') {
+                    field.onChange(value);
+                  } else if (value) {
+                    field.onChange(value.email);
+                  }
+                }}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label="Email"
+                    error={!!errors.email}
+                    helperText={errors.email?.message}
+                  />
+                )}
+              />
+            )}
           />
+
 
           <TextField
             select

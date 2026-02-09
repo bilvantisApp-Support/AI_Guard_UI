@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import {
   Box,
   Typography,
@@ -45,6 +45,7 @@ import { exportNodeToPDF } from '../../utils/exportNodeToPDF';
 import { useQuery } from '@tanstack/react-query';
 import { analyticsService } from '@/services/analyticsService';
 import { AnalyticsDataResponse } from '@/types/analytics';
+import { useParams } from 'react-router-dom';
 
 export interface AnalyticsData {
   period: string;
@@ -82,8 +83,13 @@ export const Analytics = () => {
   };
   const theme = useTheme();
   const [timeRange, setTimeRange] = useState('7d');
-  const [selectedProject, setSelectedProject] = useState('all');
   const pdfRef = useRef<HTMLDivElement>(null);
+  const { id: projectIdFromRoute } = useParams<{ id: string }>();
+
+  const [selectedProject, setSelectedProject] = useState(
+    projectIdFromRoute ?? 'all'
+  );
+  
 
   const {
     data: analyticsData,
@@ -94,6 +100,12 @@ export const Analytics = () => {
     staleTime: 5 * 60 * 1000, // 5 minutes
     retry: 2,
   });
+
+  useEffect(() => {
+    if (projectIdFromRoute) {
+      setSelectedProject(projectIdFromRoute);
+    }
+  }, [projectIdFromRoute]);
 
   // Mock data since API might not be available
   const mockAnalyticsData: AnalyticsData[] = [
@@ -255,7 +267,7 @@ export const Analytics = () => {
           <StatCard
             title="Total Cost"
             value={`$${totalCost.toFixed(4)}`}
-            subtitle={`~$${(totalCost / 7).toFixed()}/day avg`}
+            subtitle={`~$${(totalCost / 7).toFixed(4)}/day avg`}
             icon={CostIcon}
             color="success"
             trend={{ value: -3.1, isPositive: false }}
