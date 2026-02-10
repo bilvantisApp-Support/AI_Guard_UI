@@ -112,7 +112,6 @@ export const ProjectDetail = () => {
   } = useQuery<ProjectUsageResponse>({
     queryKey: ['project-usage', id],
     queryFn: () => projectService.getProjectUsage(id!),
-    enabled: !id,
   });
 
 
