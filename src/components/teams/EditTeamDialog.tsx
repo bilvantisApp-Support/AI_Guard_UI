@@ -11,13 +11,13 @@ import {
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
-import { Project, UpdateProject } from '@/types/api';
+import { Team, TeamSettings } from '@/types/api';
 
-interface EditProjectDialogProps {
+interface EditTeamDialogProps {
   open: boolean;
-  project: Project;
+  team: Team;
   onClose: () => void;
-  onSubmit: (data: UpdateProject) => Promise<void>;
+  onSubmit: (data: { name?: string; description?: string; settings?: TeamSettings }) => Promise<void>;
   loading?: boolean;
 }
 
@@ -25,76 +25,78 @@ const schema = yup.object({
   name: yup
     .string()
     .optional()
-    .min(3, 'Project name must be at least 3 characters')
-    .max(50, 'Project name must be less than 50 characters'),
-
+    .min(3, 'Team name must be at least 3 characters')
+    .max(50, 'Team name must be less than 50 characters'),
+  description: yup
+    .string()
+    .optional()
+    .max(200, 'Description must be less than 200 characters'),
   settings: yup.object({
     plan: yup
       .mixed<'free' | 'pro' | 'enterprise' | 'custom'>()
       .oneOf(['free', 'pro', 'enterprise', 'custom'])
       .optional(),
-
     rateLimitOverride: yup.object({
       windowMs: yup
         .number()
         .transform((v) => (Number.isNaN(v) ? undefined : v))
         .positive('Must be a positive number')
         .optional(),
-
       maxRequests: yup
         .number()
         .transform((v) => (Number.isNaN(v) ? undefined : v))
         .positive('Must be a positive number')
         .optional(),
     }).optional(),
-
     quotaOverride: yup.object({
       dailyLimit: yup
         .number()
         .transform((v) => (Number.isNaN(v) ? undefined : v))
         .positive('Must be a positive number')
         .optional(),
-
       monthlyLimit: yup
         .number()
         .transform((v) => (Number.isNaN(v) ? undefined : v))
         .positive('Must be a positive number')
         .optional(),
     }).optional(),
-
-    webhookUrl: yup.string().url('Must be a valid URL').optional(),
   }).optional(),
 });
 
-export const EditProjectDialog = ({
+export const EditTeamDialog = ({
   open,
-  project,
+  team,
   onClose,
   onSubmit,
   loading = false,
-}: EditProjectDialogProps) => {
+}: EditTeamDialogProps) => {
   const {
     register,
     handleSubmit,
     formState: { errors },
     reset,
     watch,
-  } = useForm<UpdateProject>({
+  } = useForm<{ name?: string; description?: string; settings?: TeamSettings }>({
     resolver: yupResolver(schema) as any,
     defaultValues: {
-      name: project.name,
+      name: team.name,
+      description: team.description || '',
       settings: {
-        ...project.settings,
-        plan: project.settings?.plan ?? 'free',
+        ...team.settings,
+        plan: team.settings?.plan ?? 'free',
       },
     },
   });
 
   const selectedPlan = watch('settings.plan');
 
-  const handleFormSubmit = async (data: UpdateProject) => {
+  const handleFormSubmit = async (data: { name?: string; description?: string; settings?: TeamSettings }) => {
     try {
-      await onSubmit(data);
+      await onSubmit({
+        name: data.name?.trim(),
+        description: data.description?.trim() || undefined,
+        settings: data.settings,
+      });
       reset();
       onClose();
     } catch {
@@ -118,13 +120,11 @@ export const EditProjectDialog = ({
         onSubmit: handleSubmit(handleFormSubmit),
       }}
     >
-      <DialogTitle>Edit Project</DialogTitle>
-
+      <DialogTitle>Edit Team</DialogTitle>
       <DialogContent>
         <Box display="flex" flexDirection="column" gap={3} pt={1}>
-          {/* Project Name */}
           <TextField
-            label="Project Name"
+            label="Team Name"
             fullWidth
             {...register('name')}
             error={!!errors.name}
@@ -141,7 +141,7 @@ export const EditProjectDialog = ({
             <MenuItem value="enterprise">Enterprise</MenuItem>
             <MenuItem value="custom">Custom</MenuItem>
           </TextField>
-          
+
           {selectedPlan === 'custom' && (
             <>
               <TextField
@@ -187,7 +187,6 @@ export const EditProjectDialog = ({
           )}
         </Box>
       </DialogContent>
-
       <DialogActions sx={{ px: 3, pb: 3 }}>
         <Button onClick={handleClose} disabled={loading}>
           Cancel

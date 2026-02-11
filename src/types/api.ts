@@ -13,6 +13,7 @@ export interface Project {
   name: string;
   description?: string;
   ownerId: string;
+  teamId?: string;
   memberCount: number;
   apiKeyCount: number;
   role: 'owner' | 'admin' | 'member';
@@ -133,4 +134,67 @@ export interface QuotaStatus {
 export interface ApiKeysResponse {
   keys: ApiKey[];
   total: number;
+}
+
+export interface TeamMember {
+  userId: string;
+  name: string;
+  email: string;
+  role: 'owner' | 'admin' | 'member';
+  addedAt: string;
+}
+
+export interface TeamProject {
+  id: string;
+  name: string;
+  ownerId: string;
+}
+
+export interface TeamSettings {
+  plan?: 'free' | 'pro' | 'enterprise' | 'custom',
+  rateLimitOverride?: {
+    enabled: boolean;
+    maxRequests: number;
+    windowMs: number;
+  };
+  quotaOverride?: {
+    dailyLimit?: number;
+    monthlyLimit?: number;
+  };
+  allowedProviders?: string[];
+}
+
+export interface Team {
+  id: string;
+  name: string;
+  description?: string;
+  ownerId: string;
+  memberCount: number;
+  projectCount: number;
+  role: 'owner' | 'admin' | 'member';
+  members?: TeamMember[];
+  settings?: TeamSettings;
+  usage?: UsageMetrics;
+  projects?: TeamProject[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TeamsResponse {
+  teams: Team[];
+  total: number;
+}
+
+export interface TeamUsageResponse {
+  teamId: string;
+  period: {
+    start: string;
+    end: string;
+  };
+  totalRequests: number;
+  totalTokens: number;
+  totalCost: number;
+  byProvider: Record<string, UsageStats>;
+  byModel: Record<string, UsageStats>;
+  byUser: Record<string, UsageStats>;
 }

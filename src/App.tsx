@@ -12,6 +12,7 @@ import { ProjectList } from '@/components/projects/ProjectList';
 import { ProjectDetail } from '@/components/projects/ProjectDetail';
 import { Analytics } from '@/components/analytics/Analytics';
 import { Teams } from '@/components/teams/Teams';
+import { TeamDetail } from '@/components/teams/TeamDetail';
 import { Tokens } from '@/components/tokens/Tokens';
 import { Profile } from '@/components/profile/Profile';
 import { ApiDebug } from '@/components/debug/ApiDebug';
@@ -84,6 +85,7 @@ function App() {
                 <Route path="analytics" element={<Analytics />} />
                 <Route path="projects/:id/analytics" element={<Analytics />} />
                 <Route path="teams" element={<Teams />} />
+                <Route path="teams/:id" element={<TeamDetail />} />
                 <Route path="tokens" element={<Tokens />} />
                 <Route path="profile" element={<Profile />} />
                 <Route path="debug" element={<ApiDebug />} />

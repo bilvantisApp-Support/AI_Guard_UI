@@ -10,6 +10,8 @@ import {
   DialogActions,
   Paper,
   IconButton,
+  Tabs,
+  Tab,
 } from '@mui/material';
 import Grid from '@mui/material/Grid';
 import {
@@ -24,6 +26,7 @@ import { CreateTokenDialog } from './CreateTokenDialog';
 import { userService } from '@/services/userService';
 import { useNotification } from '@/hooks/useNotification';
 import type { PersonalAccessToken, CreateTokenRequest } from '@/types/user';
+import { PROVIDER_CONFIG } from '@/config/providerConfig';
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -33,6 +36,7 @@ export const Tokens = () => {
     open: boolean;
     token?: PersonalAccessToken;
   }>({ open: false });
+  const [codeTab, setCodeTab] = useState<'curl' | 'node' | 'python'>('curl');
 
   const { notify } = useNotification();
   const queryClient = useQueryClient();
@@ -168,56 +172,80 @@ export const Tokens = () => {
     }
   };
 
-  const generateCurlURL = (token: String, provider: 'openai' | 'anthropic' | 'gemini') => {
+  const getProvider = (): 'openai' | 'anthropic' | 'gemini' =>
+    (newTokenDialog.token?.llmProvider as any) || 'openai';
 
-    if (!provider) {
-      return 'No Provider Selected';
-    }
-    const baseHeaders = `-H "Content-Type: application/json" \\
-          -H "Authorization: Bearer ${token}" \\
-          -H "X-AI-Guard-Provider: ${provider}"`;
+  const generateCurlURL = (token: string) => {
+    const provider = getProvider();
+    const config = PROVIDER_CONFIG[provider];
 
-    switch (provider) {
-      case 'openai':
-        return `curl -X POST ${BASE_URL}/v1/chat/completions \\
-          ${baseHeaders} \\
-          -d '{
-            "model": "gpt-4",
-            "messages": [
-              { "role": "user", "content": "Hello!" }
-            ]
-          }'`;
-      case 'gemini':
-        return `curl -X POST ${BASE_URL}/v1beta/models/:model/generateContent \\
-          ${baseHeaders} \\
-          -d '{
-            "contents": [
-              {
-                "role": "user",
-                "parts": [
-                  {
-                    "text": "Hello!"
-                  }
-                ]
-              }
-            ]
-          }'`;
+    return `curl -X POST ${BASE_URL}${config.basePath}${config.endpoint} \\
+      -H "Content-Type: application/json" \\
+      -H "Authorization: Bearer ${token}" \\
+      -H "x-ai-guard-provider: ${provider}" \\
+      -d '{
+        "model": "gpt-4o",
+        "messages": [
+          { "role": "user", "content": "Hello!" }
+        ]
+      }'`;
+  };
 
-      case 'anthropic':
-        return `curl -X POST ${BASE_URL}/v1/messages \\
-          ${baseHeaders} \\
-          -d '{
-            "model": "claude-3-sonnet-20240229",
-            "max_tokens": 256,
-            "messages": [
-              { "role": "user", "content": "Hello!" }
-            ]
-          }'`;
+  const generateNodeCode = (token: string) => {
+    const provider = getProvider();
+    const config = PROVIDER_CONFIG[provider];
 
-      default:
-        return 'No Provider Selected'
-    }
+    return `// Install:
+${config.installNode}
+
+const OpenAI = require("openai");
+
+const client = new OpenAI({
+  apiKey: "${token}",
+  baseURL: "${BASE_URL}${config.basePath}",
+  defaultHeaders: {
+    "x-ai-guard-provider": "${provider}"
   }
+});
+
+async function main() {
+  const response = await client.responses.create({
+    model: "gpt-4o",
+    input: "Hello!"
+  });
+
+  console.log(response.output_text);
+}
+
+main().catch(console.error);`;
+  };
+
+
+  const generatePythonCode = (token: string) => {
+    const provider = getProvider();
+    const config = PROVIDER_CONFIG[provider];
+
+    return `# Install:
+# ${config.installPython}
+
+from openai import OpenAI
+
+client = OpenAI(
+    api_key="${token}",
+    base_url="${BASE_URL}${config.basePath}",
+    default_headers={
+        "x-ai-guard-provider": "${provider}"
+    }
+)
+
+response = client.responses.create(
+    model="gpt-4o",
+    input="Hello!"
+)
+
+print(response.output_text)`;
+  };
+
 
   return (
     <Box>
@@ -329,27 +357,71 @@ export const Tokens = () => {
             </IconButton>
           </Box>
 
-          <Typography variant="body2" color="text.secondary">
-            Use this token to authenticate your API requests by including it in the Authorization header:
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            Use this token to authenticate your API requests:
           </Typography>
 
-          <Box
-            component="pre"
-            sx={{
-              bgcolor: 'grey.900',
-              color: 'white',
-              p: 2,
-              borderRadius: 1,
-              mt: 2,
-              fontSize: '0.8rem',
-              overflow: 'auto',
-            }}
+          <Tabs
+            value={codeTab}
+            onChange={(_, v) => setCodeTab(v)}
+            sx={{ mb: 2 }}
           >
-            {generateCurlURL(
-              newTokenDialog.token?.token || '',
-              newTokenDialog.token?.llmProvider!
-            )}
+            <Tab label="cURL" value="curl" />
+            <Tab label="Node.js" value="node" />
+            <Tab label="Python" value="python" />
+          </Tabs>
+
+          <Box sx={{ position: 'relative' }}>
+            {/* Copy Button */}
+            <IconButton
+              size="small"
+              onClick={() => {
+                const token = newTokenDialog.token?.token || '';
+                let code = '';
+
+                if (codeTab === 'curl') code = generateCurlURL(token);
+                if (codeTab === 'node') code = generateNodeCode(token);
+                if (codeTab === 'python') code = generatePythonCode(token);
+
+                navigator.clipboard.writeText(code);
+                notify('Copied to clipboard!', { type: 'success' });
+              }}
+              sx={{
+                position: 'absolute',
+                right: 8,
+                top: 8,
+                color: 'white',
+                bgcolor: 'rgba(255,255,255,0.16)',
+                '&:hover': { bgcolor: 'rgba(255,255,255,0.28)' },
+                zIndex: 1,
+              }}
+            >
+              <CopyIcon fontSize="small" />
+            </IconButton>
+
+            <Box
+              component="pre"
+              sx={{
+                bgcolor: 'grey.900',
+                color: 'white',
+                p: 2,
+                pt: 5,
+                borderRadius: 1,
+                fontSize: '0.8rem',
+                overflow: 'auto',
+              }}
+            >
+              {codeTab === 'curl' &&
+                generateCurlURL(newTokenDialog.token?.token || '')}
+
+              {codeTab === 'node' &&
+                generateNodeCode(newTokenDialog.token?.token || '')}
+
+              {codeTab === 'python' &&
+                generatePythonCode(newTokenDialog.token?.token || '')}
+            </Box>
           </Box>
+
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 3 }}>
           <Button onClick={handleCopyNewToken} startIcon={<CopyIcon />}>
