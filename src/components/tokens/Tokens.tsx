@@ -28,7 +28,6 @@ import { useNotification } from '@/hooks/useNotification';
 import type { PersonalAccessToken, CreateTokenRequest } from '@/types/user';
 import { PROVIDER_CONFIG } from '@/config/providerConfig';
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 export const Tokens = () => {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
@@ -36,7 +35,7 @@ export const Tokens = () => {
     open: boolean;
     token?: PersonalAccessToken;
   }>({ open: false });
-  const [codeTab, setCodeTab] = useState<'curl' | 'node' | 'python'>('curl');
+  const [codeTab, setCodeTab] = useState<'curl' | 'node' | 'python' | 'Java'>('curl');
 
   const { notify } = useNotification();
   const queryClient = useQueryClient();
@@ -179,45 +178,37 @@ export const Tokens = () => {
     const provider = getProvider();
     const config = PROVIDER_CONFIG[provider];
 
-    return `curl -X POST ${BASE_URL}${config.basePath}${config.endpoint} \\
-      -H "Content-Type: application/json" \\
-      -H "Authorization: Bearer ${token}" \\
-      -H "x-ai-guard-provider: ${provider}" \\
-      -d '{
-        "model": "gpt-4o",
-        "messages": [
-          { "role": "user", "content": "Hello!" }
-        ]
-      }'`;
+    return `curl -X POST ${config.endpoint} \\
+  -H "Content-Type: application/json" \\
+  -H "Authorization: Bearer ${token}" \\
+  -H "x-ai-guard-provider: ${provider}" \\
+  -d '${config.curlBody}'`;
   };
 
   const generateNodeCode = (token: string) => {
     const provider = getProvider();
     const config = PROVIDER_CONFIG[provider];
 
-    return `// Install:
-${config.installNode}
+    return `
+      // Install required SDK
+      //${config.nodeInstall}
+      ${config.nodeImport}
 
-const OpenAI = require("openai");
+      const client = ${config.nodeClient}({
+        apiKey: "${token}",
+        baseURL: "${config.basePoint}",
+        defaultHeaders: {
+          "x-ai-guard-provider": "${provider}"
+        }
+      });
 
-const client = new OpenAI({
-  apiKey: "${token}",
-  baseURL: "${BASE_URL}${config.basePath}",
-  defaultHeaders: {
-    "x-ai-guard-provider": "${provider}"
-  }
-});
+      async function main() {
+        const response = await ${config.nodeCall};
 
-async function main() {
-  const response = await client.responses.create({
-    model: "gpt-4o",
-    input: "Hello!"
-  });
+        console.log(response);
+      }
 
-  console.log(response.output_text);
-}
-
-main().catch(console.error);`;
+      main().catch(console.error);`;
   };
 
 
@@ -225,27 +216,45 @@ main().catch(console.error);`;
     const provider = getProvider();
     const config = PROVIDER_CONFIG[provider];
 
-    return `# Install:
-# ${config.installPython}
+    return `# Install required SDK
+# ${config.pythonInstall}
+${config.pythonImport}
 
-from openai import OpenAI
-
-client = OpenAI(
+client = ${config.pythonClient}(
     api_key="${token}",
-    base_url="${BASE_URL}${config.basePath}",
+    base_url="${config.basePoint}",
     default_headers={
         "x-ai-guard-provider": "${provider}"
     }
 )
 
-response = client.responses.create(
-    model="gpt-4o",
-    input="Hello!"
-)
+response = ${config.pythonCall}
 
 print(response.output_text)`;
   };
 
+  const generateJavaCode = (token: string) => {
+    const provider = getProvider();
+    const config = PROVIDER_CONFIG[provider];
+
+    return `
+    // Install dependency:
+    // ${config.javaInstall}
+      ${config.javaImport}
+
+    public class Main {
+
+        public static void main(String[] args) {
+
+            String token = "${token}";
+            String BASE_URL = "${config.basePoint}";
+
+            ${config.javaClient}
+
+            ${config.javaCall}
+        }
+    }`;
+  };
 
   return (
     <Box>
@@ -369,6 +378,7 @@ print(response.output_text)`;
             <Tab label="cURL" value="curl" />
             <Tab label="Node.js" value="node" />
             <Tab label="Python" value="python" />
+            <Tab label="Java" value="Java" />
           </Tabs>
 
           <Box sx={{ position: 'relative' }}>
@@ -382,6 +392,7 @@ print(response.output_text)`;
                 if (codeTab === 'curl') code = generateCurlURL(token);
                 if (codeTab === 'node') code = generateNodeCode(token);
                 if (codeTab === 'python') code = generatePythonCode(token);
+                if (codeTab === 'Java') code = generateJavaCode(token);
 
                 navigator.clipboard.writeText(code);
                 notify('Copied to clipboard!', { type: 'success' });
@@ -419,6 +430,9 @@ print(response.output_text)`;
 
               {codeTab === 'python' &&
                 generatePythonCode(newTokenDialog.token?.token || '')}
+
+              {codeTab === 'Java' &&
+                generateJavaCode(newTokenDialog.token?.token || '')}
             </Box>
           </Box>
 
