@@ -190,9 +190,6 @@ export const ProjectCard = ({ project, onEdit, onDelete }: ProjectCardProps) => 
             Edit Project
           </MenuItem>
         )}
-        <MenuItem onClick={() => navigate(`/projects/${project.id}/settings`)}>
-          Settings
-        </MenuItem>
         {canDelete && (
           <MenuItem onClick={handleDelete} sx={{ color: 'error.main' }}>
             Delete Project

@@ -25,7 +25,7 @@ import { TokenCard } from './TokenCard';
 import { CreateTokenDialog } from './CreateTokenDialog';
 import { userService } from '@/services/userService';
 import { useNotification } from '@/hooks/useNotification';
-import type { PersonalAccessToken, CreateTokenRequest } from '@/types/user';
+import type { PersonalAccessToken, CreateTokenRequest, APIUser } from '@/types/user';
 import { PROVIDER_CONFIG } from '@/config/providerConfig';
 
 
@@ -72,44 +72,16 @@ export const Tokens = () => {
     },
   });
 
-  // Mock data fallback when API is not available
-  const mockTokens: PersonalAccessToken[] = [
-    {
-      id: '1',
-      name: 'Production API Token',
-      // token value hidden for security in list view
-      scopes: ['api:read', 'api:write', 'projects:read'],
-      projectId: undefined,
-      lastUsedAt: '2024-07-22T08:30:00Z',
-      expiresAt: '2024-08-01T00:00:00Z',
-      isRevoked: false,
-      createdAt: '2024-07-01T00:00:00Z',
-    },
-    {
-      id: '2',
-      name: 'Mobile App Development',
-      // token value hidden for security in list view
-      scopes: ['api:read', 'projects:read'],
-      projectId: 'project-123',
-      lastUsedAt: null,
-      expiresAt: '2024-10-15T00:00:00Z',
-      isRevoked: false,
-      createdAt: '2024-07-15T00:00:00Z',
-    },
-    {
-      id: '3',
-      name: 'Legacy Integration',
-      // token value hidden for security in list view
-      scopes: ['api:read', 'api:write', 'projects:read', 'projects:write'],
-      projectId: undefined,
-      lastUsedAt: '2024-06-15T12:00:00Z',
-      expiresAt: '2024-07-25T00:00:00Z', // Expires soon
-      isRevoked: false,
-      createdAt: '2024-06-01T00:00:00Z',
-    },
-  ];
+   const { data: User } = useQuery<APIUser>({
+     queryKey: ['profile'],
+     queryFn: userService.getProfile,
+     staleTime: 5 * 60 * 1000
+   });
+ 
+   const userRole = User?.role;
+   const canCreateToken = userRole === 'owner' || userRole === 'admin';
 
-  const displayTokens = error ? mockTokens : (tokens || []);
+  const displayTokens = tokens || [];
 
   // Ensure displayTokens is always an array
   const safeDisplayTokens = Array.isArray(displayTokens) ? displayTokens : [];
@@ -125,34 +97,11 @@ export const Tokens = () => {
   }
 
   const handleCreateToken = async (data: CreateTokenRequest) => {
-    if (error) {
-      // Simulate creation in demo mode
-      const mockToken: PersonalAccessToken = {
-        id: Date.now().toString(),
-        name: data.name,
-        token: `pat_${Math.random().toString(36).substring(2, 15)}${Math.random().toString(36).substring(2, 15)}${Math.random().toString(36).substring(2, 15)}`,
-        scopes: data.scopes,
-        projectId: data.projectId,
-        lastUsedAt: null,
-        expiresAt: data.expiresInDays ? new Date(Date.now() + data.expiresInDays * 24 * 60 * 60 * 1000).toISOString() : null,
-        isRevoked: false,
-        createdAt: new Date().toISOString(),
-      };
-      setCreateDialogOpen(false);
-      setNewTokenDialog({ open: true, token: mockToken });
-      notify('Demo mode: Token would be created in real implementation', { type: 'info' });
-      return mockToken;
-    }
     const Token1 = await createMutation.mutateAsync(data);
-
     return Token1;
   };
 
   const handleDeleteToken = async (tokenId: string) => {
-    if (error) {
-      notify('Demo mode: Token would be deleted in real implementation', { type: 'info' });
-      return;
-    }
     await deleteMutation.mutateAsync(tokenId);
   };
 
@@ -262,18 +211,18 @@ print(response.output_text)`;
         <Typography variant="h4" component="h1">
           Personal Access Tokens
         </Typography>
-        <Button
+        {canCreateToken && <Button
           variant="contained"
           startIcon={<AddIcon />}
           onClick={() => setCreateDialogOpen(true)}
         >
           Create Token
-        </Button>
+        </Button>}
       </Box>
 
       {error && (
         <Alert severity="info" sx={{ mb: 3 }}>
-          Using demo data - backend API not available. Connect your AI Guard server to manage real tokens.
+          Failed to load tokens. Please try again.
         </Alert>
       )}
 
@@ -291,13 +240,13 @@ print(response.output_text)`;
           <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
             Create your first personal access token to authenticate API requests
           </Typography>
-          <Button
+          {canCreateToken && <Button
             variant="contained"
             startIcon={<AddIcon />}
-            onClick={() => setCreateDialogOpen(true)}
+            onClick={() =>setCreateDialogOpen(true)}
           >
             Create Your First Token
-          </Button>
+          </Button>}
         </Paper>
       ) : (
         <Grid container spacing={3}>

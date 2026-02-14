@@ -16,6 +16,7 @@ import { TeamDetail } from '@/components/teams/TeamDetail';
 import { Tokens } from '@/components/tokens/Tokens';
 import { Profile } from '@/components/profile/Profile';
 import { ApiDebug } from '@/components/debug/ApiDebug';
+import { Users } from './components/admin/Users';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -87,6 +88,7 @@ function App() {
                 <Route path="teams" element={<Teams />} />
                 <Route path="teams/:id" element={<TeamDetail />} />
                 <Route path="tokens" element={<Tokens />} />
+                <Route path="users" element={<Users />} />
                 <Route path="profile" element={<Profile />} />
                 <Route path="debug" element={<ApiDebug />} />
               </Route>

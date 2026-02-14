@@ -22,6 +22,7 @@ import {
 } from '@mui/icons-material';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNotification } from '@/hooks/useNotification';
+import { userService } from '@/services/userService';
 
 const schema = yup.object({
   email: yup.string().email('Invalid email').required('Email is required'),
@@ -53,7 +54,13 @@ export const Login = () => {
   const onSubmit = async (data: LoginFormData) => {
     try {
       await login(data.email, data.password);
+      const profile = await userService.getProfile();
       notify('Login successful!', { type: 'success' });
+      if (profile.role === 'owner' || profile.role === 'admin') {
+        navigate('/dashboard', { replace: true });
+      } else {
+        navigate('/projects', { replace: true });
+      }
       navigate(from, { replace: true });
     } catch (err: any) {
       notify(err.message || 'Login failed', { type: 'error' });

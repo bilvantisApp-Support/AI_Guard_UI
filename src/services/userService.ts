@@ -2,8 +2,8 @@ import { apiClient } from './api';
 import { User, PersonalAccessToken, TokensResponse, CreateTokenRequest, APIUser } from '@/types/user';
 
 export const userService = {
-  async getProfile(): Promise<User> {
-    return apiClient.get<User>('/_api/users/profile');
+  async getProfile(): Promise<APIUser> {
+    return apiClient.get<APIUser>('/_api/users/profile');
   },
 
   async getActiveUsers(): Promise<APIUser[]> {
@@ -12,6 +12,9 @@ export const userService = {
       total: number;
     }>('/_api/users');
 
+    console.log("The API call is : ",users);
+    console.log("The type is: ",typeof(users));
+    
     return users;
   },
 

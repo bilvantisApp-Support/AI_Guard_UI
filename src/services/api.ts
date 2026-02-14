@@ -36,6 +36,12 @@ class ApiClient {
         if (currentUser) {
           const token = await currentUser.getIdToken();
           config.headers.set('Authorization', `Bearer ${token}`);
+          if (config.url?.startsWith('/_api/admin')) {
+            config.headers.set(
+              'x-admin-key',
+              import.meta.env.VITE_ADMIN_SECRET_KEY
+            );
+          }
         }
         return config;
       },

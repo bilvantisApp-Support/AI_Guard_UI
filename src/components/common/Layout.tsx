@@ -31,18 +31,23 @@ import {
   Logout as LogoutIcon,
   ChevronLeft as ChevronLeftIcon,
   BugReport as DebugIcon,
+  SupervisedUserCircle,
 } from '@mui/icons-material';
 import { useAuth } from '@/contexts/AuthContext';
+import { useQuery } from '@tanstack/react-query';
+import { APIUser } from '@/types/user';
+import { userService } from '@/services/userService';
 
 const drawerWidth = 240;
 
 const menuItems = [
-  { text: 'Dashboard', icon: <DashboardIcon />, path: '/dashboard' },
-  { text: 'Projects', icon: <ProjectIcon />, path: '/projects' },
-  { text: 'Analytics', icon: <AnalyticsIcon />, path: '/analytics' },
-  { text: 'Teams', icon: <TeamIcon />, path: '/teams' },
-  { text: 'Access Tokens', icon: <TokenIcon />, path: '/tokens' },
-  { text: 'API Debug', icon: <DebugIcon />, path: '/debug' },
+  { text: 'Dashboard', icon: <DashboardIcon />, path: '/dashboard', roles: ['owner','admin']  },
+  { text: 'Projects', icon: <ProjectIcon />, path: '/projects', roles: ['owner','admin','member']  },
+  { text: 'Analytics', icon: <AnalyticsIcon />, path: '/analytics', roles: ['owner','admin']  },
+  { text: 'Teams', icon: <TeamIcon />, path: '/teams', roles: ['owner','admin','member']  },
+  { text: 'Users', icon: <SupervisedUserCircle />, path: '/users', roles: ['owner']  },
+  { text: 'Access Tokens', icon: <TokenIcon />, path: '/tokens', roles: ['owner','admin','member']  },
+  { text: 'API Debug', icon: <DebugIcon />, path: '/debug',roles: ['owner','admin']  },
 ];
 
 export const Layout = () => {
@@ -57,6 +62,18 @@ export const Layout = () => {
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
   };
+
+  const { data: User } = useQuery<APIUser>({
+    queryKey: ['profile'],
+    queryFn: userService.getProfile,
+    staleTime: 5 * 60 * 1000
+  });
+
+  const userRole = User?.role;
+
+  const filteredMenuItems = userRole
+  ? menuItems.filter(item => item.roles.includes(userRole))
+  : [];
 
   const handleMenuClick = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
@@ -89,7 +106,7 @@ export const Layout = () => {
       </Toolbar>
       <Divider />
       <List>
-        {menuItems.map((item) => (
+        {filteredMenuItems.map((item) => (
           <ListItem key={item.text} disablePadding>
             <ListItemButton
               selected={location.pathname === item.path}
@@ -130,7 +147,7 @@ export const Layout = () => {
             <MenuIcon />
           </IconButton>
           <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
-            {menuItems.find((item) => item.path === location.pathname)?.text || 'AI Guard'}
+            {filteredMenuItems.find((item) => item.path === location.pathname)?.text || 'AI Guard'}
           </Typography>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             <Typography variant="body2">{user?.email}</Typography>

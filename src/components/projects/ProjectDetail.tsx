@@ -114,91 +114,8 @@ export const ProjectDetail = () => {
     queryFn: () => projectService.getProjectUsage(id!),
   });
 
-
-  // Mock data fallback
-  const mockProject: Project = {
-    id: id || '1',
-    name: 'ChatBot Application',
-    description: 'Customer service chatbot using GPT-4 for automated support. This project handles customer inquiries, provides instant responses, and escalates complex issues to human agents.',
-    ownerId: 'user1',
-    memberCount: 3,
-    apiKeyCount: 2,
-    role: 'owner',
-    members: [
-      { userId: 'user1', role: 'owner', name: "John Doe", email: "john.doe@example.com", addedAt: '2024-07-01T00:00:00Z' },
-      { userId: 'user2', role: 'admin', name: "Jane Smith", email: "jane.smith@example.com", addedAt: '2024-07-02T00:00:00Z' },
-      { userId: 'user3', role: 'member', name: "Bob Johnson", email: "bob.johnson@example.com", addedAt: '2024-07-03T00:00:00Z' },
-    ],
-    settings: {
-      rateLimitOverride: { enabled: true, maxRequests: 1000, windowMs: 60000 },
-      quotaOverride
-: { dailyLimit: 10000, monthlyLimit: 300000 },
-      allowedProviders: ['openai', 'anthropic'],
-    },
-    usage: {
-      total: {
-        cost: 15.2438,
-        requests: 1247,
-        tokens: 45832
-      },
-      currentMonth: {
-        requests: 389,
-        tokens: 12456,
-        cost: 4.7821
-      },
-      currentDay: {
-        requests: 23,
-        tokens: 1289,
-        cost: 0.3456
-      },
-      lastUpdated: '2024-07-23T05:21:59.737Z'
-    },
-    createdAt: '2024-07-01T00:00:00Z',
-    updatedAt: '2024-07-20T10:30:00Z',
-  };
-
-  const mockApiKeys: ApiKey[] = [
-    {
-      id: '1',
-      keyId: 'key1',
-      projectId: id || '1',
-      name: 'OpenAI Production',
-      provider: 'openai',
-      maskedKey: 'sk-...abc123',
-      isActive: true,
-      lastUsed: '2024-07-22T08:30:00Z',
-      createdAt: '2024-07-01T00:00:00Z',
-      updatedAt: '2024-07-01T00:00:00Z',
-    },
-    {
-      id: '2',
-      keyId: 'key2',
-      projectId: id || '1',
-      name: 'Anthropic Backup',
-      provider: 'anthropic',
-      maskedKey: 'sk-...def456',
-      isActive: true,
-      lastUsed: '2024-07-21T14:20:00Z',
-      createdAt: '2024-07-02T00:00:00Z',
-      updatedAt: '2024-07-02T00:00:00Z',
-    },
-    {
-      id: '3',
-      keyId: 'key3',
-      projectId: id || '1',
-      name: 'Google Testing',
-      provider: 'gemini',
-      maskedKey: 'AIz...ghi789',
-      isActive: false,
-      createdAt: '2024-07-03T00:00:00Z',
-      updatedAt: '2024-07-03T00:00:00Z',
-    },
-  ];
-
-  const displayProject = projectError ? mockProject : project;
-  const displayApiKeys = Array.isArray(projectError ? mockApiKeys : apiKeys)
-    ? (projectError ? mockApiKeys : apiKeys)
-    : mockApiKeys;
+  const displayProject = project;
+  const displayApiKeys = apiKeys
 
   const currentMember = displayProject?.members?.find((m) => m.email == user?.email);
   const currentUserRole = currentMember?.role;
@@ -416,7 +333,7 @@ export const ProjectDetail = () => {
     );
   }
 
-  if (!displayProject) {
+  if (projectError || !displayProject) {
     return (
       <Box>
         <Button

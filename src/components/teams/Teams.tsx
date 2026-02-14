@@ -25,6 +25,8 @@ import { useNotification } from '@/hooks/useNotification';
 import { TeamCard } from './TeamCard';
 import { CreateTeamDialog } from './CreateTeamDialog';
 import { EditTeamDialog } from './EditTeamDialog';
+import { APIUser } from '@/types/user';
+import { userService } from '@/services/userService';
 
 export const Teams = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -47,6 +49,15 @@ export const Teams = () => {
     queryFn: teamService.getTeams,
     staleTime: 5 * 60 * 1000,
   });
+
+  const { data: User } = useQuery<APIUser>({
+       queryKey: ['profile'],
+       queryFn: userService.getProfile,
+       staleTime: 5 * 60 * 1000
+     });
+   
+     const userRole = User?.role;
+     const canCreateTeam = userRole === 'owner' || userRole === 'admin';
 
   const createMutation = useMutation({
     mutationFn: teamService.createTeam,
@@ -83,39 +94,7 @@ export const Teams = () => {
     },
   });
 
-  const mockTeams: Team[] = [
-    {
-      id: '1',
-      name: 'AI Team',
-      description: 'Core AI engineering group',
-      ownerId: 'user1',
-      memberCount: 4,
-      projectCount: 2,
-      role: 'owner',
-      members: [
-        { userId: 'user1', role: 'owner', name: 'John Doe', email: 'john.doe@example.com', addedAt: '2024-07-01T00:00:00Z' },
-        { userId: 'user2', role: 'admin', name: 'Jane Smith', email: 'jane.smith@example.com', addedAt: '2024-07-02T00:00:00Z' },
-      ],
-      createdAt: '2024-07-01T00:00:00Z',
-      updatedAt: '2024-07-20T10:30:00Z',
-    },
-    {
-      id: '2',
-      name: 'Platform Team',
-      description: 'Infra and platform reliability',
-      ownerId: 'user1',
-      memberCount: 3,
-      projectCount: 1,
-      role: 'admin',
-      members: [
-        { userId: 'user1', role: 'owner', name: 'John Doe', email: 'john.doe@example.com', addedAt: '2024-07-05T00:00:00Z' },
-      ],
-      createdAt: '2024-07-05T00:00:00Z',
-      updatedAt: '2024-07-21T14:20:00Z',
-    },
-  ];
-
-  const displayTeams = error ? mockTeams : (teams || []);
+  const displayTeams = teams || [];
   const safeDisplayTeams = Array.isArray(displayTeams) ? displayTeams : [];
 
   const filteredTeams = safeDisplayTeams.filter((team) =>
@@ -180,18 +159,18 @@ export const Teams = () => {
         <Typography variant="h4" component="h1">
           Teams
         </Typography>
-        <Button
+        {canCreateTeam && <Button
           variant="contained"
           startIcon={<AddIcon />}
-          onClick={() => setCreateDialogOpen(true)}
+          onClick={() =>setCreateDialogOpen(true)}
         >
           Create Team
-        </Button>
+        </Button>}
       </Box>
 
       {error && (
         <Alert severity="info" sx={{ mb: 3 }}>
-          Using demo data - backend API not available. Connect your AI Guard server to manage real teams.
+          Failed to load teams data. Please try again.
         </Alert>
       )}
 
@@ -228,13 +207,13 @@ export const Teams = () => {
               <Typography variant="body1" sx={{ mb: 3 }}>
                 Create your first team to manage members and usage
               </Typography>
-              <Button
+              {canCreateTeam && <Button
                 variant="contained"
                 startIcon={<AddIcon />}
                 onClick={() => setCreateDialogOpen(true)}
               >
                 Create Your First Team
-              </Button>
+              </Button>}
             </>
           )}
         </Box>

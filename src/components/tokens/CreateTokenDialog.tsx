@@ -22,7 +22,7 @@ import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
 import { useQuery } from '@tanstack/react-query';
 import { projectService } from '@/services/projectService';
-import { APIUser, CreateTokenRequest, PersonalAccessToken, TOKEN_SCOPES } from '@/types/user';
+import { CreateTokenRequest, PersonalAccessToken, TOKEN_SCOPES, UserOption } from '@/types/user';
 import { Project } from '@/types/api';
 import { userService } from '@/services/userService';
 
@@ -92,9 +92,9 @@ export const CreateTokenDialog = ({
     },
   });
   
-  const { data: users = [] } = useQuery<APIUser[]>({
-    queryKey: ['users', selectedProjectId],
-    queryFn: async (): Promise<APIUser[]> => {
+  const { data: users = [] } = useQuery<UserOption[]>({
+    queryKey: ['active-users', selectedProjectId],
+    queryFn: async (): Promise<UserOption[]> => {
       if (selectedProjectId && selectedProject?.members) {
         return selectedProject.members.map((member) => ({
           id: member.userId,
@@ -222,8 +222,15 @@ export const CreateTokenDialog = ({
                   {...field}
                   label="Project Scope (Optional)"
                   value={field.value || ''}
-                >
-                  <MenuItem value="">
+                    MenuProps={{
+                      PaperProps: {
+                        sx: {
+                          maxHeight: 170,
+                        },
+                      },
+                    }}
+                  >
+                    <MenuItem value="">
                     <em>All Projects</em>
                   </MenuItem>
                   {projects.map((project) => (
@@ -249,6 +256,13 @@ export const CreateTokenDialog = ({
                   {...field}
                   label="User"
                   value={field.value || ''}
+                  MenuProps={{
+                    PaperProps: {
+                      sx: {
+                        maxHeight: 170,
+                      },
+                    },
+                  }}
                 >
                   {users.map((user) => (
                     <MenuItem key={user.id} value={user.id}>

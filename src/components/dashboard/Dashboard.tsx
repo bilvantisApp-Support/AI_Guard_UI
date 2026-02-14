@@ -71,81 +71,17 @@ export const Dashboard = () => {
     notify('Dashboard refreshed', { type: 'success' });
   };
 
-  // Mock data fallback when API is not available
-  const mockStats: DashboardStats = {
-    totalRequests: 1250,
-    totalTokens: 125000,
-    totalCost: 23.45,
-    activeProjects: 3,
+  const displayStats = stats ?? {
+    totalRequests: 0,
+    totalTokens: 0,
+    totalCost: 0,
+    activeProjects: 0,
   };
 
-  const mockActivities: ActivityItem[] = [
-    {
-      id: '1',
-      type: 'api_call',
-      title: 'OpenAI API Call',
-      description: 'GPT-4 completion request processed successfully',
-      timestamp: new Date(Date.now() - 1000 * 60 * 5).toISOString(),
-      projectName: 'ChatBot Project',
-      severity: 'success',
-    },
-    {
-      id: '2',
-      type: 'project_created',
-      title: 'New Project Created',
-      description: 'Content Generation project has been created',
-      timestamp: new Date(Date.now() - 1000 * 60 * 30).toISOString(),
-      severity: 'info',
-    },
-    {
-      id: '3',
-      type: 'key_added',
-      title: 'API Key Added',
-      description: 'Anthropic API key added to Marketing project',
-      timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(),
-      projectName: 'Marketing',
-      severity: 'success',
-    },
-    {
-      id: '4',
-      type: 'error',
-      title: 'Rate Limit Exceeded',
-      description: 'OpenAI rate limit reached for ChatBot Project',
-      timestamp: new Date(Date.now() - 1000 * 60 * 60 * 4).toISOString(),
-      projectName: 'ChatBot Project',
-      severity: 'warning',
-    },
-    {
-      id: '5',
-      type: 'member_invited',
-      title: 'Team Member Invited',
-      description: 'john@example.com invited to Marketing project',
-      timestamp: new Date(Date.now() - 1000 * 60 * 60 * 6).toISOString(),
-      projectName: 'Marketing',
-      severity: 'info',
-    },
-  ];
+  const displayActivities = activities ?? [];
+  const displayUsageTrend = usageTrend ?? [];
+  const displayProviderStats = providerStats ?? [];
 
-  const mockUsageTrend: UsageTrend[] = [
-    { date: '2024-07-16', requests: 120, cost: 2.34, tokens: 12000 },
-    { date: '2024-07-17', requests: 145, cost: 2.89, tokens: 14500 },
-    { date: '2024-07-18', requests: 98, cost: 1.95, tokens: 9800 },
-    { date: '2024-07-19', requests: 167, cost: 3.21, tokens: 16700 },
-    { date: '2024-07-20', requests: 203, cost: 4.12, tokens: 20300 },
-    { date: '2024-07-21', requests: 189, cost: 3.67, tokens: 18900 },
-    { date: '2024-07-22', requests: 234, cost: 4.78, tokens: 23400 },
-  ];
-
-  const mockProviderStats: ProviderStats[] = [
-    { provider: 'openai', requests: 820, cost: 15.67, percentage: 65.6 },
-    { provider: 'anthropic', requests: 320, cost: 6.45, percentage: 25.6 },
-    { provider: 'google', requests: 110, cost: 1.33, percentage: 8.8 },
-  ];
-
-  const displayStats = statsError ? mockStats : stats;
-  const displayActivities = statsError ? mockActivities : activities;
-  const displayUsageTrend = statsError ? mockUsageTrend : usageTrend;
-  const displayProviderStats = statsError ? mockProviderStats : providerStats;
 
   return (
     <Box sx={{ flexGrow: 1 }}>
@@ -177,7 +113,7 @@ export const Dashboard = () => {
             </Button>
           }
         >
-          Using demo data - backend API not available. Connect your AI Guard server to see live data.
+          Failed to load dashboard data. Please try again.
         </Alert>
       )}
 

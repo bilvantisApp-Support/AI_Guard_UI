@@ -11,6 +11,14 @@ export interface APIUser {
   id: string;
   name: string;
   email: string;
+  role: 'owner' | 'admin' | 'member';
+  status: 'active' | 'suspended' | 'deleted';
+}
+
+export interface UserOption {
+  id: string;
+  name: string;
+  email: string;
 }
 
 export interface AuthState {
@@ -44,6 +52,30 @@ export interface CreateTokenRequest {
   projectId?: string;
   userId?: string;
   expiresInDays?: number;
+}
+
+export interface UsersResponse {
+  users: APIUser[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    pages: number;
+  };
+}
+
+export interface UpdateUserRequest {
+  role?: 'owner' | 'admin' | 'member';
+  status?: 'active' | 'suspended' | 'deleted';
+}
+
+export interface UpdateUserResponse {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  status: string;
+  updatedAt: string;
 }
 
 export const TOKEN_SCOPES = [

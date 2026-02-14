@@ -116,6 +116,14 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   const signup = async (email: string, password: string, name: string) => {
     try {
+      if(!email.toLowerCase().endsWith('@bilvantis.io')){
+        throw new Error('Only Bilvantis email addresses are allowed');
+      }
+
+      if (!/^[A-Za-z\s]+$/.test(name.trim())) {
+      throw new Error('Name must contain only letters');
+      }
+
       setState((prev) => ({ ...prev, error: null }));
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       

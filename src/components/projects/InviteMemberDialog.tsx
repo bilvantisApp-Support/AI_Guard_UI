@@ -61,7 +61,7 @@ export const InviteMemberDialog = ({
   });
 
   const { data: users = [], isLoading } = useQuery<APIUser[]>({
-    queryKey: ['users'],
+    queryKey: ['active-users'],
     queryFn: userService.getActiveUsers,
     enabled: open,
     staleTime: 5 * 60 * 1000,
@@ -119,6 +119,12 @@ export const InviteMemberDialog = ({
                   } else if (value) {
                     field.onChange(value.email);
                   }
+                }}
+                 ListboxProps={{
+                  style: {
+                    maxHeight: 150, 
+                    overflowY: 'auto',
+                  },
                 }}
                 renderInput={(params) => (
                   <TextField

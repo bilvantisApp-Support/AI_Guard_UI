@@ -26,6 +26,8 @@ import { projectService } from '@/services/projectService';
 import { useNotification } from '@/hooks/useNotification';
 import { Project, UpdateProject } from '@/types/api';
 import { EditProjectDialog } from './EditProjectDialog';
+import { APIUser } from '@/types/user';
+import { userService } from '@/services/userService';
 
 export const ProjectList = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -48,6 +50,14 @@ export const ProjectList = () => {
     queryFn: projectService.getProjects,
     staleTime: 5 * 60 * 1000,
   });
+  const { data: User } = useQuery<APIUser>({
+    queryKey: ['profile'],
+    queryFn: userService.getProfile,
+    staleTime: 5 * 60 * 1000
+  });
+
+  const userRole = User?.role;
+  const canCreateProject = userRole === 'owner' || userRole === 'admin';
 
   const createMutation = useMutation({
     mutationFn: projectService.createProject,
@@ -89,71 +99,7 @@ export const ProjectList = () => {
     },
   });
 
-  // Mock data fallback when API is not available
-  const mockProjects: Project[] = [
-    {
-      id: '1',
-      name: 'ChatBot Application',
-      description: 'Customer service chatbot using GPT-4 for automated support',
-      ownerId: 'user1',
-      memberCount: 3,
-      apiKeyCount: 2,
-      role: 'owner',
-      members: [
-        { userId: 'user1', role: 'owner', name: "John Doe", email: "john.doe@example.com", addedAt: '2024-07-01T00:00:00Z' },
-        { userId: 'user2', role: 'admin', name: "Jane Smith", email: "jane.smith@example.com", addedAt: '2024-07-02T00:00:00Z' },
-        { userId: 'user3', role: 'member', name: "Bob Johnson", email: "bob.johnson@example.com", addedAt: '2024-07-03T00:00:00Z' },
-      ],
-      settings: {
-        rateLimitOverride: { enabled: true, maxRequests: 1000, windowMs: 60000 },
-        quotaOverride: { dailyLimit: 10000, monthlyLimit: 300000 },
-        allowedProviders: ['openai', 'anthropic'],
-      },
-      createdAt: '2024-07-01T00:00:00Z',
-      updatedAt: '2024-07-20T10:30:00Z',
-    },
-    {
-      id: '2',
-      name: 'Content Generator',
-      description: 'AI-powered content generation for marketing materials',
-      ownerId: 'user1',
-      memberCount: 2,
-      apiKeyCount: 1,
-      role: 'owner',
-      members: [
-        { userId: 'user1', role: 'owner', name: "John Doe", email: "john.doe@example.com", addedAt: '2024-07-05T00:00:00Z' },
-        { userId: 'user4', role: 'member', name: "John Doe", email: "john.doe@example.com", addedAt: '2024-07-06T00:00:00Z' },
-      ],
-      settings: {
-        rateLimitOverride: { enabled: true, maxRequests: 500, windowMs: 60000 },
-        quotaOverride: { dailyLimit: 5000, monthlyLimit: 150000 },
-        allowedProviders: ['openai', 'gemini'],
-      },
-      createdAt: '2024-07-05T00:00:00Z',
-      updatedAt: '2024-07-21T14:20:00Z',
-    },
-    {
-      id: '3',
-      name: 'Research Assistant',
-      description: 'Document analysis and research automation using Claude',
-      ownerId: 'user1',
-      memberCount: 1,
-      apiKeyCount: 1,
-      role: 'owner',
-      members: [
-        { userId: 'user1', role: 'owner', name: "John Doe", email: "john.doe@example.com", addedAt: '2024-07-10T00:00:00Z' },
-      ],
-      settings: {
-        rateLimitOverride: { enabled: true, maxRequests: 200, windowMs: 60000 },
-        quotaOverride: { dailyLimit: 2000, monthlyLimit: 60000 },
-        allowedProviders: ['anthropic'],
-      },
-      createdAt: '2024-07-10T00:00:00Z',
-      updatedAt: '2024-07-22T09:15:00Z',
-    },
-  ];
-
-  const displayProjects = error ? mockProjects : (projects || []);
+  const displayProjects = projects;
 
   // Ensure displayProjects is always an array
   const safeDisplayProjects = Array.isArray(displayProjects) ? displayProjects : [];
@@ -243,13 +189,13 @@ export const ProjectList = () => {
         <Typography variant="h4" component="h1">
           Projects
         </Typography>
-        <Button
+        {canCreateProject && <Button
           variant="contained"
           startIcon={<AddIcon />}
-          onClick={() => setCreateDialogOpen(true)}
+          onClick={() =>setCreateDialogOpen(true)}
         >
           Create Project
-        </Button>
+        </Button>}
       </Box>
 
       {error && (
@@ -291,13 +237,13 @@ export const ProjectList = () => {
               <Typography variant="body1" sx={{ mb: 3 }}>
                 Create your first project to start managing AI API access
               </Typography>
-              <Button
+              {canCreateProject && <Button
                 variant="contained"
                 startIcon={<AddIcon />}
                 onClick={() => setCreateDialogOpen(true)}
               >
                 Create Your First Project
-              </Button>
+              </Button>}
             </>
           )}
         </Box>
@@ -320,14 +266,14 @@ export const ProjectList = () => {
         </Grid>
       )}
 
-      <Fab
+      {canCreateProject && <Fab
         color="primary"
         aria-label="add"
         sx={{ position: 'fixed', bottom: 16, right: 16 }}
         onClick={() => setCreateDialogOpen(true)}
       >
         <AddIcon />
-      </Fab>
+      </Fab>}
 
       <CreateProjectDialog
         open={createDialogOpen}
