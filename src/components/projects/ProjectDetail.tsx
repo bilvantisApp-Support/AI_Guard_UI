@@ -112,6 +112,7 @@ export const ProjectDetail = () => {
   } = useQuery<ProjectUsageResponse>({
     queryKey: ['project-usage', id],
     queryFn: () => projectService.getProjectUsage(id!),
+    enabled: !!id
   });
 
   const displayProject = project;
@@ -382,7 +383,7 @@ export const ProjectDetail = () => {
 
       {projectError && (
         <Alert severity="info" sx={{ mb: 3 }}>
-          Using demo data - backend API not available. Connect your AI Guard server to see live project data.
+          Failed to load projects data. Please try again.
         </Alert>
       )}
 
@@ -416,7 +417,7 @@ export const ProjectDetail = () => {
                 <ListItemText
                   primary="Rate Limiting"
                   secondary={
-                    displayProject.settings?.rateLimitOverride?.maxRequests
+                    displayProject.settings?.rateLimitOverride?.maxRequests != null
                       ? `${displayProject.settings.rateLimitOverride.maxRequests} requests/minute`
                       : 'Disabled'
                   }
@@ -544,7 +545,7 @@ export const ProjectDetail = () => {
           <List>
             {displayProject.members?.map((member, index) => (
               <ListItem
-                key={member.userId}
+                key={member.memberUserId}
                 divider={index < (displayProject.members?.length || 0) - 1}
                 secondaryAction={
                   <Box display="flex" alignItems="center" gap={1}>
@@ -555,8 +556,7 @@ export const ProjectDetail = () => {
                       variant="outlined"
                     />
                     {member.role !== 'owner' && (
-                      <IconButton size="small" onClick={(e) => handleMemberMenuOpen(e, member.userId)}>
-
+                      <IconButton size="small" onClick={(e) => handleMemberMenuOpen(e, member.memberUserId)}>
                         <MoreIcon />
                       </IconButton>
                     )}
@@ -715,14 +715,14 @@ export const ProjectDetail = () => {
           ) : (
             <Grid container spacing={3}>
               {displayProject.members?.map((member) => {
-                const usage = projectUsage?.byUser?.[member.userId] ?? {
+                const usage = projectUsage?.byUser?.[member.memberUserId] ?? {
                   requests: 0,
                   tokens: 0,
                   cost: 0,
                 };
 
                 return (
-                  <Grid item xs={12} md={6} key={member.userId}>
+                  <Grid item xs={12} md={6} key={member.memberUserId}>
                     <Paper sx={{ p: 3 }}>
                       <Box display="flex" alignItems="center" mb={2}>
                         <Avatar sx={{ mr: 2 }}>
@@ -823,7 +823,7 @@ export const ProjectDetail = () => {
           <MenuItem
             onClick={() => {
               const member = displayProject.members?.find(
-                (m) => m.userId === selectedMemberId
+                (m) => m.memberUserId === selectedMemberId
               );
               setEditingMember(member);
               setOpenEditMember(true);
@@ -874,7 +874,7 @@ export const ProjectDetail = () => {
           loading={updateMemberMutation.isPending}
           onSubmit={async (role) => {
             await updateMember({
-              memberId: editingMember.userId,
+              memberId: editingMember.memberUserId,
               role,
             });
           }}

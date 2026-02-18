@@ -90,6 +90,7 @@ export const CreateTokenDialog = ({
     queryFn: () => {
       return projectService.getProject(selectedProjectId!);
     },
+    enabled: !!selectedProjectId
   });
   
   const { data: users = [] } = useQuery<UserOption[]>({
@@ -97,7 +98,7 @@ export const CreateTokenDialog = ({
     queryFn: async (): Promise<UserOption[]> => {
       if (selectedProjectId && selectedProject?.members) {
         return selectedProject.members.map((member) => ({
-          id: member.userId,
+          id: member.memberUserId,
           name: member.name,
           email: member.email,
         }));

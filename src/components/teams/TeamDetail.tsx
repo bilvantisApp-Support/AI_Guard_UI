@@ -113,34 +113,7 @@ export const TeamDetail = () => {
     queryFn: projectService.getProjects,
   });
 
-  const mockTeam: Team = {
-    id: id || '1',
-    name: 'AI Team',
-    description: 'Core AI engineering group',
-    ownerId: 'user1',
-    memberCount: 3,
-    projectCount: 2,
-    role: 'owner',
-    members: [
-      { userId: 'user1', role: 'owner', name: 'John Doe', email: 'john.doe@example.com', addedAt: '2024-07-01T00:00:00Z' },
-      { userId: 'user2', role: 'admin', name: 'Jane Smith', email: 'jane.smith@example.com', addedAt: '2024-07-02T00:00:00Z' },
-      { userId: 'user3', role: 'member', name: 'Bob Johnson', email: 'bob.johnson@example.com', addedAt: '2024-07-03T00:00:00Z' },
-    ],
-    projects: [
-      { id: '1', name: 'ChatBot Application', ownerId: 'user1' },
-      { id: '2', name: 'Content Generator', ownerId: 'user1' },
-    ],
-    usage: {
-      total: { cost: 12.98, requests: 980, tokens: 38210 },
-      currentMonth: { cost: 3.12, requests: 210, tokens: 8123 },
-      currentDay: { cost: 0.45, requests: 18, tokens: 742 },
-      lastUpdated: '2024-07-23T05:21:59.737Z',
-    },
-    createdAt: '2024-07-01T00:00:00Z',
-    updatedAt: '2024-07-20T10:30:00Z',
-  };
-
-  const displayTeam = teamError ? mockTeam : team;
+  const displayTeam = team;
   const assignedProjects: TeamProject[] = displayTeam?.projects || [];
 
   const currentMember = displayTeam?.members?.find((m) => m.email == user?.email);
@@ -279,7 +252,7 @@ export const TeamDetail = () => {
     );
   }
 
-  if (!displayTeam) {
+  if (teamError || !displayTeam) {
     return (
       <Box>
         <Button
@@ -298,7 +271,7 @@ export const TeamDetail = () => {
 
   return (
     <Box>
-      <Box display="flex" alignItems="center" justifyContent="between" mb={3}>
+      <Box display="flex" alignItems="center" justifyContent="space-between" mb={3}>
         <Box display="flex" alignItems="center" gap={2} flex={1}>
           <IconButton onClick={() => navigate('/teams')}>
             <BackIcon />
@@ -328,7 +301,7 @@ export const TeamDetail = () => {
 
       {teamError && (
         <Alert severity="info" sx={{ mb: 3 }}>
-          Using demo data - backend API not available. Connect your AI Guard server to see live team data.
+          Failed to load teams data. Please try again.
         </Alert>
       )}
 
@@ -372,7 +345,6 @@ export const TeamDetail = () => {
                 if (!isOwnerOrAdmin) return;
                 setOpenInviteMember(true);
               }}
-              disabled={!isOwnerOrAdmin}
             >
               Invite Member
             </Button>
@@ -381,7 +353,7 @@ export const TeamDetail = () => {
           <List>
             {displayTeam.members?.map((member, index) => (
               <ListItem
-                key={member.userId}
+                key={member.memberUserId}
                 divider={index < (displayTeam.members?.length || 0) - 1}
                 secondaryAction={
                   <Box display="flex" alignItems="center" gap={1}>
@@ -392,7 +364,7 @@ export const TeamDetail = () => {
                       variant="outlined"
                     />
                     {member.role !== 'owner' && (
-                      <IconButton size="small" onClick={(e) => handleMemberMenuOpen(e, member.userId)}>
+                      <IconButton size="small" onClick={(e) => handleMemberMenuOpen(e, member.memberUserId)}>
                         <MoreIcon />
                       </IconButton>
                     )}
@@ -427,7 +399,6 @@ export const TeamDetail = () => {
                 if (!isOwnerOrAdmin) return;
                 setOpenAssignProject(true);
               }}
-              disabled={!isOwnerOrAdmin}
             >
               Assign Project
             </Button>
@@ -468,7 +439,6 @@ export const TeamDetail = () => {
                   </ListItemAvatar>
                   <ListItemText
                     primary={project.name}
-                    secondary={`Project ID: ${project.id}`}
                   />
                   <Button size="small" onClick={() => navigate(`/projects/${project.id}`)}>
                     View Project
@@ -610,14 +580,14 @@ export const TeamDetail = () => {
           ) : (
             <Grid container spacing={3}>
               {displayTeam.members?.map((member) => {
-                const usage = teamUsage?.byUser?.[member.userId] ?? {
+                const usage = teamUsage?.byUser?.[member.memberUserId] ?? {
                   requests: 0,
                   tokens: 0,
                   cost: 0,
                 };
 
                 return (
-                  <Grid item xs={12} md={6} key={member.userId}>
+                  <Grid item xs={12} md={6} key={member.memberUserId}>
                     <Paper sx={{ p: 3 }}>
                       <Box display="flex" alignItems="center" mb={2}>
                         <Avatar sx={{ mr: 2 }}>
@@ -693,7 +663,7 @@ export const TeamDetail = () => {
           <MenuItem
             onClick={() => {
               const member = displayTeam.members?.find(
-                (m) => m.userId === selectedMemberId
+                (m) => m.memberUserId.toString() === selectedMemberId?.toString()
               );
               setEditingMember(member);
               setOpenEditMember(true);
@@ -755,7 +725,7 @@ export const TeamDetail = () => {
           loading={updateMemberMutation.isPending}
           onSubmit={async (role) => {
             await updateMemberMutation.mutateAsync({
-              memberId: editingMember.userId,
+              memberId: editingMember.memberUserId,
               role,
             });
             setOpenEditMember(false);

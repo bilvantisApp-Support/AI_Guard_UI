@@ -11,12 +11,14 @@ import {
 import { auth } from '@/config/firebase';
 import { User, AuthState } from '@/types/user';
 import axios from 'axios';
+import { userService } from '@/services/userService';
 
 interface AuthContextType extends AuthState {
   login: (email: string, password: string) => Promise<void>;
   signup: (email: string, password: string, name: string) => Promise<void>;
   logout: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
+  mailjetresetPassword: (email: string) => Promise<void>;
   updateUserProfile: (name: string) => Promise<void>;
   getIdToken: () => Promise<string | null>;
 }
@@ -116,22 +118,22 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   const signup = async (email: string, password: string, name: string) => {
     try {
-      if(!email.toLowerCase().endsWith('@bilvantis.io')){
+      if (!email.toLowerCase().endsWith('@bilvantis.io')) {
         throw new Error('Only Bilvantis email addresses are allowed');
       }
 
       if (!/^[A-Za-z\s]+$/.test(name.trim())) {
-      throw new Error('Name must contain only letters');
+        throw new Error('Name must contain only letters');
       }
 
       setState((prev) => ({ ...prev, error: null }));
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      
+
       if (name) {
         await updateProfile(userCredential.user, { displayName: name });
       }
 
-     await userCredential.user.getIdToken();
+      await userCredential.user.getIdToken();
     } catch (error: any) {
       setState((prev) => ({
         ...prev,
@@ -157,7 +159,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       throw error;
     }
   };
-
+  //Existing resetpassword sevice of firebase
   const resetPassword = async (email: string) => {
     try {
       await sendPasswordResetEmail(auth, email);
@@ -169,6 +171,21 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       throw error;
     }
   };
+
+  //To send the reset password mail through mailjet
+  const mailjetresetPassword = async (email: string) => {
+    try {
+      await userService.forgotPassword(email);
+    }
+    catch (error: any) {
+      setState(prev => ({
+        ...prev,
+        error: error.response?.data?.message || error.message || "Failed to send reset email"
+      }));
+      throw error;
+    }
+  };
+
 
   const updateUserProfile = async (name: string) => {
     try {
@@ -213,6 +230,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     signup,
     logout,
     resetPassword,
+    mailjetresetPassword,
     updateUserProfile,
     getIdToken,
   };

@@ -142,7 +142,7 @@ export const TeamCard = ({ team, onEdit, onDelete }: TeamCardProps) => {
         <Box display="flex" alignItems="center" justifyContent="space-between">
           <AvatarGroup max={4} sx={{ '& .MuiAvatar-root': { width: 24, height: 24, fontSize: '0.75rem' } }}>
             {team.members ? team.members.slice(0, 4).map((member, index) => (
-              <Avatar key={member.userId} sx={{ bgcolor: 'primary.main' }}>
+              <Avatar key={member.memberUserId} sx={{ bgcolor: 'primary.main' }}>
                 {member.name ? member.name.charAt(0).toUpperCase() : String.fromCharCode(65 + index)}
               </Avatar>
             )) : (

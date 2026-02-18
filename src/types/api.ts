@@ -54,7 +54,7 @@ export interface ProjectsResponse {
 }
 
 export interface ProjectMember {
-  userId: string;
+  memberUserId: string;
   name: string;
   email: string;
   role: 'owner' | 'admin' | 'member';
@@ -137,7 +137,7 @@ export interface ApiKeysResponse {
 }
 
 export interface TeamMember {
-  userId: string;
+  memberUserId: string;
   name: string;
   email: string;
   role: 'owner' | 'admin' | 'member';

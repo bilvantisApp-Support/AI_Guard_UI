@@ -57,7 +57,9 @@ export const Tokens = () => {
       setNewTokenDialog({ open: true, token: newToken });
     },
     onError: (error: any) => {
-      notify(error.message || 'Failed to create token', { type: 'error' });
+      const message =
+        error.response.data.error.message || 'Failed to create token';
+        notify(message, { type: 'error' });
     },
   });
 
@@ -68,18 +70,17 @@ export const Tokens = () => {
       notify('Token deleted successfully!', { type: 'success' });
     },
     onError: (error: any) => {
-      notify(error.message || 'Failed to delete token', { type: 'error' });
+      notify(error.response.data.error.message || 'Failed to delete token', { type: 'error' });
     },
   });
 
-   const { data: User } = useQuery<APIUser>({
-     queryKey: ['profile'],
-     queryFn: userService.getProfile,
-     staleTime: 5 * 60 * 1000
-   });
- 
-   const userRole = User?.role;
-   const canCreateToken = userRole === 'owner' || userRole === 'admin';
+  const { data: User } = useQuery<APIUser>({
+    queryKey: ['profile'],
+    queryFn: userService.getProfile,
+    staleTime: 5 * 60 * 1000
+  });
+  const userRole = User?.role;
+  const canCreateToken = userRole === 'owner' || userRole === 'admin';
 
   const displayTokens = tokens || [];
 
@@ -243,7 +244,7 @@ print(response.output_text)`;
           {canCreateToken && <Button
             variant="contained"
             startIcon={<AddIcon />}
-            onClick={() =>setCreateDialogOpen(true)}
+            onClick={() => setCreateDialogOpen(true)}
           >
             Create Your First Token
           </Button>}

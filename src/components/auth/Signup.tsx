@@ -24,6 +24,7 @@ import {
 } from '@mui/icons-material';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNotification } from '@/hooks/useNotification';
+import { otpService } from '@/services/otpService';
 
 const schema = yup.object({
   name: yup.string().required('Name is required'),
@@ -56,13 +57,19 @@ interface SignupFormData {
 export const Signup = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [otp, setOtp] = useState('');
+  const [otpSent, setOtpSent] = useState(false);
+  const [otpVerified, setOtpVerified] = useState(false);
   const { signup, error } = useAuth();
   const navigate = useNavigate();
   const { notify } = useNotification();
+  // Enable sending OTP once the email service is ready
+  const SENT_OTP = false;
 
   const {
     register,
     handleSubmit,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<SignupFormData>({
     resolver: yupResolver(schema),
@@ -75,6 +82,44 @@ export const Signup = () => {
       navigate('/dashboard');
     } catch (err: any) {
       notify(err.message || 'Signup failed', { type: 'error' });
+    }
+  };
+
+  const handleOtpAndSignup = async () => {
+    try {
+      const name = watch('name');
+      const email = watch('email');
+
+      if (!SENT_OTP) {
+        await handleSubmit(onSubmit)();
+        return;
+      }
+
+      if (!otpSent) {
+        await otpService.sendOTP({ email, name });
+        setOtpSent(true);
+        notify('OTP sent successfully', { type: 'success' });
+        return;
+      }
+
+      if (!otpVerified) {
+        const valid = await otpService.verifyOTP({ email, otp });
+
+        if (!valid) {
+          notify('Invalid OTP', { type: 'error' });
+          return;
+        }
+
+        setOtpVerified(true);
+        notify('OTP verified successfully', { type: 'success' });
+        return;
+      }
+
+      // Only signup after OTP verified
+      await handleSubmit(onSubmit)();
+
+    } catch (err: any) {
+      notify(err.message || 'Operation failed', { type: 'error' });
     }
   };
 
@@ -125,7 +170,7 @@ export const Signup = () => {
             </Alert>
           )}
 
-          <Box component="form" onSubmit={handleSubmit(onSubmit)} sx={{ mt: 1, width: '100%' }}>
+          <Box component="form" sx={{ mt: 1, width: '100%' }}>
             <TextField
               margin="normal"
               required
@@ -199,6 +244,16 @@ export const Signup = () => {
                 ),
               }}
             />
+            {otpSent && (
+              <TextField
+                margin="normal"
+                required
+                fullWidth
+                label="Enter OTP"
+                value={otp}
+                onChange={(e) => setOtp(e.target.value)}
+              />
+            )}
             <FormControlLabel
               control={
                 <Checkbox
@@ -224,13 +279,16 @@ export const Signup = () => {
               </Typography>
             )}
             <Button
-              type="submit"
+              type="button"
               fullWidth
               variant="contained"
               sx={{ mt: 3, mb: 2 }}
               disabled={isSubmitting}
+              onClick={handleOtpAndSignup}
             >
-              {isSubmitting ? 'Creating account...' : 'Sign Up'}
+              {
+                !SENT_OTP ? 'Sign Up' : !otpSent ? 'Send OTP' : !otpVerified ? 'Verify OTP' : 'Sign Up'
+              }
             </Button>
             <Box sx={{ textAlign: 'center' }}>
               <Divider sx={{ my: 2 }} />

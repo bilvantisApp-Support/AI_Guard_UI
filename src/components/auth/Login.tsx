@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
@@ -38,10 +38,7 @@ export const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const { login, error } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation();
   const { notify } = useNotification();
-
-  const from = location.state?.from?.pathname || '/dashboard';
 
   const {
     register,
@@ -61,7 +58,6 @@ export const Login = () => {
       } else {
         navigate('/projects', { replace: true });
       }
-      navigate(from, { replace: true });
     } catch (err: any) {
       notify(err.message || 'Login failed', { type: 'error' });
     }

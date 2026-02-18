@@ -69,15 +69,6 @@ export interface UpdateUserRequest {
   status?: 'active' | 'suspended' | 'deleted';
 }
 
-export interface UpdateUserResponse {
-  id: string;
-  name: string;
-  email: string;
-  role: string;
-  status: string;
-  updatedAt: string;
-}
-
 export const TOKEN_SCOPES = [
   'api:read',
   'api:write',

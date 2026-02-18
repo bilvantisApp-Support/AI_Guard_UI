@@ -1,4 +1,4 @@
-import { UpdateUserRequest, UpdateUserResponse, UsersResponse } from '@/types/user';
+import { APIUser, UpdateUserRequest, UsersResponse } from '@/types/user';
 import { apiClient } from './api';
 
 export const adminService = {
@@ -11,8 +11,8 @@ export const adminService = {
   async updateUser(
     userId: string,
     data: UpdateUserRequest
-  ): Promise<UpdateUserResponse> {
-    return apiClient.put<UpdateUserResponse>(
+  ): Promise<APIUser> {
+    return apiClient.put<APIUser>(
       `/_api/admin/users/${userId}`,
       data
     );

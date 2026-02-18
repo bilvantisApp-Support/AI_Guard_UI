@@ -17,6 +17,10 @@ import { Tokens } from '@/components/tokens/Tokens';
 import { Profile } from '@/components/profile/Profile';
 import { ApiDebug } from '@/components/debug/ApiDebug';
 import { Users } from './components/admin/Users';
+import { ForgotPassword } from './components/auth/ForgotPassword';
+import { ResetPassword } from './components/auth/ResetPassword';
+import { Unauthorized } from './components/common/Unauthorized';
+import { NotFound } from './components/common/NotFound';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -71,6 +75,9 @@ function App() {
             <Routes>
               <Route path="/login" element={<Login />} />
               <Route path="/signup" element={<Signup />} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
+              <Route path="/unauthorized" element={<Unauthorized />} />
               <Route
                 path="/"
                 element={
@@ -80,18 +87,40 @@ function App() {
                 }
               >
                 <Route index element={<Navigate to="/dashboard" replace />} />
-                <Route path="dashboard" element={<Dashboard />} />
+                <Route path="dashboard" element={
+                  <ProtectedRoute roles={['admin', 'owner']}>
+                    <Dashboard />
+                  </ProtectedRoute>
+                }
+                />
                 <Route path="projects" element={<ProjectList />} />
                 <Route path="projects/:id" element={<ProjectDetail />} />
-                <Route path="analytics" element={<Analytics />} />
-                <Route path="projects/:id/analytics" element={<Analytics />} />
+                <Route path="analytics" element={
+                  <ProtectedRoute roles={['admin', 'owner']}>
+                    <Analytics />
+                  </ProtectedRoute>
+                }
+                />
+                <Route path="projects/:id/analytics" element={
+                  <ProtectedRoute roles={['admin', 'owner']}>
+                    <Analytics />
+                  </ProtectedRoute>
+                }
+                />
                 <Route path="teams" element={<Teams />} />
                 <Route path="teams/:id" element={<TeamDetail />} />
                 <Route path="tokens" element={<Tokens />} />
-                <Route path="users" element={<Users />} />
+                <Route path="users" element={
+                  <ProtectedRoute roles={['owner']}>
+                    <Users />
+                  </ProtectedRoute>
+                }
+                />
                 <Route path="profile" element={<Profile />} />
                 <Route path="debug" element={<ApiDebug />} />
               </Route>
+              
+              <Route path="*" element={<NotFound />} />
             </Routes>
           </Router>
           <Toaster

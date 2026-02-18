@@ -12,9 +12,6 @@ export const userService = {
       total: number;
     }>('/_api/users');
 
-    console.log("The API call is : ",users);
-    console.log("The type is: ",typeof(users));
-    
     return users;
   },
 
@@ -52,5 +49,11 @@ export const userService = {
 
   async deleteToken(tokenId: string): Promise<void> {
     return apiClient.delete<void>(`/_api/users/tokens/${tokenId}`);
+  },
+
+  async forgotPassword(email: string): Promise<void> {
+    await apiClient.post("/_api/users/forgot-password", {
+      email
+    });
   },
 };

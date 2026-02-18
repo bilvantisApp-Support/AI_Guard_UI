@@ -149,7 +149,8 @@ export const ProjectList = () => {
 
   const handleEditMenuOpen = (project: Project) => {
     setEditingProject(project);
-    setEditDialogOpen(true);
+    // Disable access to the edit project dialog box. Enable If needed
+    setEditDialogOpen(false);
   }
 
   const handleEditProject = async (data: UpdateProject) => {
@@ -192,7 +193,7 @@ export const ProjectList = () => {
         {canCreateProject && <Button
           variant="contained"
           startIcon={<AddIcon />}
-          onClick={() =>setCreateDialogOpen(true)}
+          onClick={() => setCreateDialogOpen(true)}
         >
           Create Project
         </Button>}
@@ -294,7 +295,6 @@ export const ProjectList = () => {
           loading={updateMutation.isPending}
         />
       )}
-
 
       <Dialog
         open={deleteDialog.open}

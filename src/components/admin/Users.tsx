@@ -16,77 +16,57 @@ import {
 } from '@mui/material';
 import PeopleOutlineIcon from '@mui/icons-material/PeopleOutline';
 import RefreshIcon from '@mui/icons-material/Refresh';
-import {
-    DataGrid,
-    GridColDef,
-    GridRenderCellParams,
-} from '@mui/x-data-grid';
-import {
-    useQuery,
-    useMutation,
-    useQueryClient,
-} from '@tanstack/react-query';
-import {
-    adminService,
-} from '@/services/adminService';
-import {
-    APIUser,
-    UpdateUserRequest,
-    UsersResponse,
-} from '@/types/user';
+import { DataGrid, GridColDef, GridRenderCellParams, } from '@mui/x-data-grid';
+import { useQuery, useMutation, useQueryClient, } from '@tanstack/react-query';
+import { adminService } from '@/services/adminService';
+import { APIUser, UpdateUserRequest, UsersResponse } from '@/types/user';
+import { useNotification } from '@/hooks/useNotification';
 
 
 type UserRole = 'owner' | 'admin' | 'member';
-
 interface Row {
     id: string;
     user: APIUser;
 }
 
 export const Users = () => {
-
     const queryClient = useQueryClient();
+    const { notify } = useNotification();
 
-    const { data, isLoading, isError, refetch } =
+    const { data, isLoading, isError } =
         useQuery<UsersResponse>({
             queryKey: ['users'],
             queryFn: () => adminService.listUsers(1, 1000),
         });
 
     const mutation = useMutation({
-        mutationFn: ({
-            userId,
-            payload,
-        }: {
-            userId: string;
-            payload: UpdateUserRequest;
-        }) =>
-            adminService.updateUser(userId, payload),
-
+        mutationFn: ({ userId, payload }:
+            { userId: string; payload: UpdateUserRequest; }) => adminService.updateUser(userId, payload),
         onSuccess: updated => {
-            queryClient.setQueryData(
-                ['users'],
-                (old?: UsersResponse) =>
-                    old && {
-                        ...old,
-                        users: old.users.map(u =>
-                            u.id === updated.id ? updated : u
-                        ),
-                    }
-            );
+            queryClient.setQueryData(['users'], (old?: UsersResponse) => old && {
+                ...old,
+                users: old.users.map(u =>
+                    u.id === updated.id ? { ...u, role: updated.role as APIUser['role'], status: updated.status as APIUser['status'] }:u
+                )
+            });
         },
+        onError: (error: any) => {
+            notify(
+                error?.response?.data?.error?.message || 'Failed to update user',
+                { type: 'error' }
+            );
+        }
     });
 
     const handleRole = (user: APIUser, role: UserRole) => {
-        if (user.role === 'owner') return;
         mutation.mutate({
             userId: user.id,
             payload: { role, status: user.status },
         });
+        notify('User role updated successfully', { type: "success" })
     };
 
     const handleStatus = (user: APIUser, active: boolean) => {
-        if (user.role === 'owner') return;
         mutation.mutate({
             userId: user.id,
             payload: {
@@ -94,17 +74,15 @@ export const Users = () => {
                 status: active ? 'active' : 'suspended',
             },
         });
+        notify('User status updated successfully', { type: "success" })
     };
 
-    const rows: Row[] =
-        useMemo(
-            () =>
-                data?.users.map(u => ({
-                    id: u.id,
-                    user: u,
-                })) || [],
-            [data]
-        );
+    const rows: Row[] = useMemo(() => data?.users.map(u => ({
+        id: u.id,
+        user: u,
+    })) || [],
+        [data]
+    );
 
     const avatarColor = (name: string) => {
         const colors = [
@@ -129,7 +107,6 @@ export const Users = () => {
             .toUpperCase();
 
     const columns: GridColDef<Row>[] = [
-
         {
             field: 'name',
             headerName: 'Name',
@@ -187,7 +164,6 @@ export const Users = () => {
                     <FormControl size="small" fullWidth>
                         <Select
                             value={u.role}
-                            disabled={u.role === 'owner'}
                             onChange={e =>
                                 handleRole(
                                     u,
@@ -231,12 +207,9 @@ export const Users = () => {
             renderCell: (params) => {
 
                 const u = params.row.user;
-
                 return (
-
                     <Switch
                         checked={u.status === 'active'}
-                        disabled={u.role === 'owner'}
                         onChange={e =>
                             handleStatus(
                                 u,
@@ -244,12 +217,9 @@ export const Users = () => {
                             )
                         }
                     />
-
                 );
-
             },
         },
-
     ];
 
     if (isLoading)
@@ -269,25 +239,21 @@ export const Users = () => {
     return (
 
         <Box p={3}>
-
             <Box display="flex" justifyContent="space-between" mb={2}>
-
                 <Box>
                     <Typography variant="h5" fontWeight={700}>
                         User Management
                     </Typography>
-
                     <Typography color="text.secondary">
                         Manage users
                     </Typography>
                 </Box>
 
                 <Tooltip title="Refresh">
-                    <IconButton onClick={() => refetch}>
+                    <IconButton onClick={() => queryClient.invalidateQueries({ queryKey: ['users'] })}>
                         <RefreshIcon />
                     </IconButton>
                 </Tooltip>
-
             </Box>
 
             <Paper
@@ -299,7 +265,6 @@ export const Users = () => {
                         `1px solid ${alpha(theme.palette.primary.main, 0.15)}`,
                 }}
             >
-
                 <DataGrid
                     rows={rows}
                     columns={columns}
@@ -314,14 +279,12 @@ export const Users = () => {
                     columnHeaderHeight={56}
                     sx={{
                         border: 0,
-
                         '& .MuiDataGrid-columnHeaders': {
                             backgroundColor: theme =>
                                 alpha(theme.palette.primary.main, 0.04),
                             fontSize: 14,
                             fontWeight: 600,
                         },
-
                         '& .MuiDataGrid-cell': {
                             display: 'flex',
                             alignItems: 'center',
@@ -329,11 +292,7 @@ export const Users = () => {
                         },
                     }}
                 />
-
             </Paper>
-
         </Box>
-
     );
-
 };

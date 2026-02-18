@@ -4,7 +4,6 @@ import {
   TeamsResponse,
   TeamMember,
   TeamUsageResponse,
-  TeamProject,
   TeamSettings,
 } from '@/types/api';
 
