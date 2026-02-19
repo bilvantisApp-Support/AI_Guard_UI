@@ -24,6 +24,7 @@ import {
 } from '@mui/icons-material';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNotification } from '@/hooks/useNotification';
+import { Turnstile } from "@marsidev/react-turnstile";
 import { otpService } from '@/services/otpService';
 
 const schema = yup.object({
@@ -57,6 +58,7 @@ interface SignupFormData {
 export const Signup = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const [otp, setOtp] = useState('');
   const [otpSent, setOtpSent] = useState(false);
   const [otpVerified, setOtpVerified] = useState(false);
@@ -77,9 +79,13 @@ export const Signup = () => {
 
   const onSubmit = async (data: SignupFormData) => {
     try {
-      await signup(data.email, data.password, data.name);
+      if(!captchaToken){
+        notify('Captcha validation failed',{type: 'error'});
+        return;
+      }
+      await signup(data.email, data.password, data.name, captchaToken);
       notify('Account created successfully!', { type: 'success' });
-      navigate('/dashboard');
+      navigate('/login');
     } catch (err: any) {
       notify(err.message || 'Signup failed', { type: 'error' });
     }
@@ -244,6 +250,13 @@ export const Signup = () => {
                 ),
               }}
             />
+            <Box sx={{ mt: 2, display: "flex", justifyContent: "center" }}>
+              <Turnstile
+                siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY}
+                onSuccess={(token) => setCaptchaToken(token)}
+                onExpire={() => setCaptchaToken(null)}
+              />
+            </Box>
             {otpSent && (
               <TextField
                 margin="normal"
@@ -283,7 +296,7 @@ export const Signup = () => {
               fullWidth
               variant="contained"
               sx={{ mt: 3, mb: 2 }}
-              disabled={isSubmitting}
+              disabled={isSubmitting || !captchaToken}
               onClick={handleOtpAndSignup}
             >
               {

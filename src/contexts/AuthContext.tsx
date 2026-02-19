@@ -15,7 +15,7 @@ import { userService } from '@/services/userService';
 
 interface AuthContextType extends AuthState {
   login: (email: string, password: string) => Promise<void>;
-  signup: (email: string, password: string, name: string) => Promise<void>;
+  signup: (email: string, password: string, name: string, captchaToken: string) => Promise<void>;
   logout: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
   mailjetresetPassword: (email: string) => Promise<void>;
@@ -44,12 +44,13 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     error: null,
   });
 
-  const fetchUserProfile = async (firebaseUser: FirebaseUser): Promise<User | null> => {
+  const fetchUserProfile = async (firebaseUser: FirebaseUser, captchaToken?: string): Promise<User | null> => {
     try {
       const token = await firebaseUser.getIdToken();
       const response = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/_api/users/profile`, {
         headers: {
           Authorization: `Bearer ${token}`,
+          "x-captcha-token": captchaToken
         },
       });
       return response.data;
@@ -116,10 +117,15 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     }
   };
 
-  const signup = async (email: string, password: string, name: string) => {
+  const signup = async (email: string, password: string, name: string, captchaToken: string) => {
     try {
-      if (!email.toLowerCase().endsWith('@bilvantis.io')) {
-        throw new Error('Only Bilvantis email addresses are allowed');
+
+      // if (!email.toLowerCase().endsWith('@bilvantis.io')) {
+      //   throw new Error('Only Bilvantis email addresses are allowed');
+      // }
+
+      if (!captchaToken) {
+        throw new Error("Captcha required");
       }
 
       if (!/^[A-Za-z\s]+$/.test(name.trim())) {
@@ -133,7 +139,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         await updateProfile(userCredential.user, { displayName: name });
       }
 
-      await userCredential.user.getIdToken();
+      await fetchUserProfile(userCredential.user, captchaToken);
     } catch (error: any) {
       setState((prev) => ({
         ...prev,
