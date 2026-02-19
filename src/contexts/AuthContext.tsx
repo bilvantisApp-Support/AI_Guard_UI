@@ -120,9 +120,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const signup = async (email: string, password: string, name: string, captchaToken: string) => {
     try {
 
-      // if (!email.toLowerCase().endsWith('@bilvantis.io')) {
-      //   throw new Error('Only Bilvantis email addresses are allowed');
-      // }
+      if (!email.toLowerCase().endsWith('@bilvantis.io')) {
+        throw new Error('Only Bilvantis email addresses are allowed');
+      }
 
       if (!captchaToken) {
         throw new Error("Captcha required");
