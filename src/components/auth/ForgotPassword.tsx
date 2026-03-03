@@ -18,7 +18,7 @@ interface FormData {
 }
 
 export const ForgotPassword = () => {
-    const { mailjetresetPassword } = useAuth();
+    const { brevotresetPassword } = useAuth();
     const { notify } = useNotification();
     const [success, setSuccess] = useState(false);
     const {
@@ -29,7 +29,7 @@ export const ForgotPassword = () => {
 
     const onSubmit = async (data: FormData) => {
         try {
-            await mailjetresetPassword(data.email);
+            await brevotresetPassword(data.email);
             setSuccess(true);
             notify("Password reset email sent", { type: "success" });
         } catch (error: any) {

@@ -18,7 +18,7 @@ interface AuthContextType extends AuthState {
   signup: (email: string, password: string, name: string, captchaToken: string) => Promise<void>;
   logout: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
-  mailjetresetPassword: (email: string) => Promise<void>;
+  brevotresetPassword: (email: string) => Promise<void>;
   updateUserProfile: (name: string) => Promise<void>;
   getIdToken: () => Promise<string | null>;
 }
@@ -179,7 +179,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   };
 
   //To send the reset password mail through mailjet
-  const mailjetresetPassword = async (email: string) => {
+  const brevotresetPassword = async (email: string) => {
     try {
       await userService.forgotPassword(email);
     }
@@ -236,7 +236,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     signup,
     logout,
     resetPassword,
-    mailjetresetPassword,
+    brevotresetPassword,
     updateUserProfile,
     getIdToken,
   };
