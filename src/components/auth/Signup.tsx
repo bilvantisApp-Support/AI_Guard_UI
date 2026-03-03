@@ -121,7 +121,7 @@ export const Signup = () => {
       }
 
       if (!otpVerified) {
-        const valid = await otpService.verifyOTP({ email, otp: Number(otp) });
+        const valid = await otpService.verifyOTP({ email, otp: otp });
 
         if (!valid) {
           notify('Invalid OTP', { type: 'error' });
