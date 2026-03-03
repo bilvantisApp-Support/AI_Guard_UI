@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
@@ -62,11 +62,12 @@ export const Signup = () => {
   const [otp, setOtp] = useState('');
   const [otpSent, setOtpSent] = useState(false);
   const [otpVerified, setOtpVerified] = useState(false);
+  const [timer, setTimer] = useState<number>(0);
   const { signup, error } = useAuth();
   const navigate = useNavigate();
   const { notify } = useNotification();
   // Enable sending OTP once the email service is ready
-  const SENT_OTP = false;
+  const SENT_OTP = true;
 
   const {
     register,
@@ -79,8 +80,8 @@ export const Signup = () => {
 
   const onSubmit = async (data: SignupFormData) => {
     try {
-      if(!captchaToken){
-        notify('Captcha validation failed',{type: 'error'});
+      if (!captchaToken) {
+        notify('Captcha validation failed', { type: 'error' });
         return;
       }
       await signup(data.email, data.password, data.name, captchaToken);
@@ -90,6 +91,16 @@ export const Signup = () => {
       notify(err.message || 'Signup failed', { type: 'error' });
     }
   };
+
+  useEffect(() => {
+    if (timer <= 0) {
+      return;
+    }
+    const interval = setInterval(() => {
+      setTimer((prev) => prev - 1)
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [timer]);
 
   const handleOtpAndSignup = async () => {
     try {
@@ -104,12 +115,13 @@ export const Signup = () => {
       if (!otpSent) {
         await otpService.sendOTP({ email, name });
         setOtpSent(true);
-        notify('OTP sent successfully', { type: 'success' });
+        setTimer(180);
+        notify(otpSent ? 'OTP resent successfully' : 'OTP sent successfully', { type: 'success' });
         return;
       }
 
       if (!otpVerified) {
-        const valid = await otpService.verifyOTP({ email, otp });
+        const valid = await otpService.verifyOTP({ email, otp: Number(otp) });
 
         if (!valid) {
           notify('Invalid OTP', { type: 'error' });
@@ -128,6 +140,12 @@ export const Signup = () => {
       notify(err.message || 'Operation failed', { type: 'error' });
     }
   };
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs < 10 ? 0 : ''}${secs}`;
+  }
 
   return (
     <Container component="main" maxWidth="xs">
@@ -266,6 +284,34 @@ export const Signup = () => {
                 value={otp}
                 onChange={(e) => setOtp(e.target.value)}
               />
+            )}
+            {otpSent && !otpVerified && (
+              <Box sx={{ mt: 1 }}>
+                <Typography variant="body2">
+                  Didn't receive the code?
+                </Typography>
+
+                {timer > 0 ? (
+                  <Typography sx={{flex:"column"}} variant="body2" color="text.secondary">
+                    Resend OTP in {formatTime(timer)}
+                  </Typography>
+                ) : (
+                  <Button
+                    size="small"
+                    sx={{flex:"column"}}
+                    onClick={async () => {
+                      const name = watch('name');
+                      const email = watch('email');
+
+                      await otpService.sendOTP({ email, name });
+                      setTimer(180);
+                      notify('OTP resent successfully', { type: 'success' });
+                    }}
+                  >
+                    Resend OTP
+                  </Button>
+                )}
+              </Box>
             )}
             <FormControlLabel
               control={

@@ -33,6 +33,7 @@ import * as yup from 'yup';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNotification } from '@/hooks/useNotification';
 import { formatDistanceToNow } from 'date-fns';
+import AccessTimeIcon from '@mui/icons-material/AccessTime';
 
 const schema = yup.object({
   name: yup
@@ -180,6 +181,7 @@ export const Profile = () => {
                     size="small"
                     color={getTierColor(user.tier) as any}
                     variant="outlined"
+                    icon={<AccessTimeIcon />}
                   />
                   <Typography variant="caption" color="text.secondary">
                     Member since{' '}
@@ -392,8 +394,8 @@ export const Profile = () => {
           <Button onClick={() => setShowDeleteDialog(false)}>
             Cancel
           </Button>
-          <Button 
-            color="error" 
+          <Button
+            color="error"
             variant="contained"
             onClick={() => {
               notify('Account deletion is not available in demo mode', { type: 'info' });
