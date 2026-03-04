@@ -45,8 +45,13 @@ export const ResetPassword = () => {
         return;
       }
 
-      await verifyPasswordResetCode(auth, oobCode!);
-      await confirmPasswordReset(auth, oobCode!, password);
+      if (oobCode) {
+        await verifyPasswordResetCode(auth, oobCode);
+        await confirmPasswordReset(auth, oobCode, password);
+      }else{
+        setError("Missing oobCode in the URL");
+        return;
+      }
 
       setSuccess("Password reset successful");
 

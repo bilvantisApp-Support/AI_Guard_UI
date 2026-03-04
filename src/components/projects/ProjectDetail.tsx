@@ -453,12 +453,11 @@ export const ProjectDetail = () => {
         <TabPanel value={tabValue} index={0}>
           <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
             <Typography variant="h6">API Keys</Typography>
-            <Button variant="contained" startIcon={<AddIcon />} onClick={() => {
-              if (!isOwnerOrAdmin) return;
+            {isOwnerOrAdmin &&<Button variant="contained" startIcon={<AddIcon />} onClick={() => {
               setOpenAddKey(true);
             }}>
               Add API Key
-            </Button>
+            </Button>}
           </Box>
 
           {displayApiKeys.length === 0 ? (
@@ -491,12 +490,12 @@ export const ProjectDetail = () => {
                           color={key.isActive === true ? 'success' : 'default'}
                           variant="outlined"
                         />
-                        <IconButton
+                       {isOwnerOrAdmin && <IconButton
                           size="small"
                           onClick={(e) => handleKeyMenuOpen(e, key.keyId)}
                         >
                           <MoreIcon />
-                        </IconButton>
+                        </IconButton>}
 
                       </Box>
                     }
@@ -534,12 +533,11 @@ export const ProjectDetail = () => {
         <TabPanel value={tabValue} index={1}>
           <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
             <Typography variant="h6">Team Members</Typography>
-            <Button variant="contained" startIcon={<AddIcon />} onClick={() => {
-              if (!isOwnerOrAdmin) return;
+            {isOwnerOrAdmin && <Button variant="contained" startIcon={<AddIcon />} onClick={() => {
               setOpenInviteMember(true);
             }}>
               Invite Member
-            </Button>
+            </Button>}
           </Box>
 
           <List>
@@ -555,7 +553,7 @@ export const ProjectDetail = () => {
                       color={getRoleColor(member.role) as any}
                       variant="outlined"
                     />
-                    {member.role !== 'owner' && (
+                    {isOwnerOrAdmin && (
                       <IconButton size="small" onClick={(e) => handleMemberMenuOpen(e, member.memberUserId)}>
                         <MoreIcon />
                       </IconButton>

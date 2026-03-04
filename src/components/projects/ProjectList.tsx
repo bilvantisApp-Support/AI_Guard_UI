@@ -150,7 +150,7 @@ export const ProjectList = () => {
   const handleEditMenuOpen = (project: Project) => {
     setEditingProject(project);
     // Disable access to the edit project dialog box. Enable If needed
-    setEditDialogOpen(false);
+    setEditDialogOpen(true);
   }
 
   const handleEditProject = async (data: UpdateProject) => {

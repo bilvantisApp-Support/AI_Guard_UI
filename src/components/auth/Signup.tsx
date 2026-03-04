@@ -107,6 +107,17 @@ export const Signup = () => {
       const name = watch('name');
       const email = watch('email');
 
+      if (!name || typeof name !== 'string') {
+        notify('Name is required to send OTP', { type: 'error' });
+        return;
+      }
+
+      const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+      if (!email || typeof email !== 'string' || !emailRegex.test(email)) {
+        notify('Valid email is required to send OTP', { type: 'error' });
+        return;
+      }
+
       if (!SENT_OTP) {
         await handleSubmit(onSubmit)();
         return;
@@ -292,13 +303,13 @@ export const Signup = () => {
                 </Typography>
 
                 {timer > 0 ? (
-                  <Typography sx={{flex:"column"}} variant="body2" color="text.secondary">
+                  <Typography sx={{ flex: "column" }} variant="body2" color="text.secondary">
                     Resend OTP in {formatTime(timer)}
                   </Typography>
                 ) : (
                   <Button
                     size="small"
-                    sx={{flex:"column"}}
+                    sx={{ flex: "column" }}
                     onClick={async () => {
                       const name = watch('name');
                       const email = watch('email');

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
@@ -22,7 +22,6 @@ import {
 } from '@mui/icons-material';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNotification } from '@/hooks/useNotification';
-import { userService } from '@/services/userService';
 
 const schema = yup.object({
   email: yup.string().email('Invalid email').required('Email is required'),
@@ -38,8 +37,10 @@ export const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const { login, error } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const { notify } = useNotification();
 
+  const from = location.state?.from?.pathname || '/projects';
   const {
     register,
     handleSubmit,
@@ -51,13 +52,8 @@ export const Login = () => {
   const onSubmit = async (data: LoginFormData) => {
     try {
       await login(data.email, data.password);
-      const profile = await userService.getProfile();
       notify('Login successful!', { type: 'success' });
-      if (profile.role === 'owner' || profile.role === 'admin') {
-        navigate('/dashboard', { replace: true });
-      } else {
-        navigate('/projects', { replace: true });
-      }
+      navigate(from, { replace: true });
     } catch (err: any) {
       notify(err.message || 'Login failed', { type: 'error' });
     }

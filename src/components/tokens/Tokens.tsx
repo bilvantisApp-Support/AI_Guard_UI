@@ -59,7 +59,7 @@ export const Tokens = () => {
     onError: (error: any) => {
       const message =
         error.response.data.error.message || 'Failed to create token';
-        notify(message, { type: 'error' });
+      notify(message, { type: 'error' });
     },
   });
 
@@ -70,7 +70,7 @@ export const Tokens = () => {
       notify('Token deleted successfully!', { type: 'success' });
     },
     onError: (error: any) => {
-      notify(error.response.data.error.message || 'Failed to delete token', { type: 'error' });
+      notify(error?.response?.data?.error?.message || 'Failed to delete token', { type: 'error' });
     },
   });
 

@@ -338,16 +338,15 @@ export const TeamDetail = () => {
         <TabPanel value={tabValue} index={0}>
           <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
             <Typography variant="h6">Team Members</Typography>
-            <Button
+            {isOwnerOrAdmin && <Button
               variant="contained"
               startIcon={<AddIcon />}
               onClick={() => {
-                if (!isOwnerOrAdmin) return;
                 setOpenInviteMember(true);
               }}
             >
               Invite Member
-            </Button>
+            </Button>}
           </Box>
 
           <List>
@@ -363,7 +362,7 @@ export const TeamDetail = () => {
                       color={getRoleColor(member.role) as any}
                       variant="outlined"
                     />
-                    {member.role !== 'owner' && (
+                    {isOwnerOrAdmin && (
                       <IconButton size="small" onClick={(e) => handleMemberMenuOpen(e, member.memberUserId)}>
                         <MoreIcon />
                       </IconButton>
@@ -392,16 +391,15 @@ export const TeamDetail = () => {
         <TabPanel value={tabValue} index={1}>
           <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
             <Typography variant="h6">Projects</Typography>
-            <Button
+            {isOwnerOrAdmin && <Button
               variant="contained"
               startIcon={<AddIcon />}
               onClick={() => {
-                if (!isOwnerOrAdmin) return;
                 setOpenAssignProject(true);
               }}
             >
               Assign Project
-            </Button>
+            </Button>}
           </Box>
 
           {assignedProjects.length === 0 ? (

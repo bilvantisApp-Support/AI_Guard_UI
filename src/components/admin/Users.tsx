@@ -46,7 +46,7 @@ export const Users = () => {
             queryClient.setQueryData(['users'], (old?: UsersResponse) => old && {
                 ...old,
                 users: old.users.map(u =>
-                    u.id === updated.id ? { ...u, role: updated.role as APIUser['role'], status: updated.status as APIUser['status'] }:u
+                    u.id === updated.id ? { ...u, role: updated.role as APIUser['role'], status: updated.status as APIUser['status'] } : u
                 )
             });
         },
@@ -58,23 +58,33 @@ export const Users = () => {
         }
     });
 
-    const handleRole = (user: APIUser, role: UserRole) => {
-        mutation.mutate({
-            userId: user.id,
-            payload: { role, status: user.status },
-        });
-        notify('User role updated successfully', { type: "success" })
+    const handleRole = async (user: APIUser, role: UserRole) => {
+        try {
+            await mutation.mutate({
+                userId: user.id,
+                payload: { role, status: user.status },
+            });
+            notify('User role updated successfully', { type: "success" });
+        } catch (error) {
+            notify('Failed to update user role', { type: "error" });
+            return;
+        }
     };
 
     const handleStatus = (user: APIUser, active: boolean) => {
-        mutation.mutate({
-            userId: user.id,
-            payload: {
-                role: user.role,
-                status: active ? 'active' : 'suspended',
-            },
-        });
-        notify('User status updated successfully', { type: "success" })
+        try {
+            mutation.mutate({
+                userId: user.id,
+                payload: {
+                    role: user.role,
+                    status: active ? 'active' : 'suspended',
+                },
+            });
+            notify('User status updated successfully', { type: "success" });
+        } catch (error) {
+            notify('Failed to update user status', { type: "error" });
+            return;
+        }
     };
 
     const rows: Row[] = useMemo(() => data?.users.map(u => ({

@@ -19,6 +19,8 @@ export const ProtectedRoute = ({ children, roles }: ProtectedRouteProps) => {
     enabled: !!user
   });
 
+  const userRole = profile?.role;
+
   if (loading) {
     return (
       <Box
@@ -36,7 +38,7 @@ export const ProtectedRoute = ({ children, roles }: ProtectedRouteProps) => {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  if (roles && profile && !roles.includes(profile.role)) {
+  if (roles && !roles.includes(userRole!)) {
     return <Navigate to="/unauthorized" replace />;
   }
 

@@ -126,7 +126,7 @@ export const Teams = () => {
   const handleEditMenuOpen = (team: Team) => {
     setEditingTeam(team);
     // Disable access to the edit project dialog box. Enable If needed
-    setEditDialogOpen(false);
+    setEditDialogOpen(true);
   };
 
   const handleEditTeam = async (data: { name?: string; description?: string }) => {

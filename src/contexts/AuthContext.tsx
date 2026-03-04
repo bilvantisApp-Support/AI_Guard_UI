@@ -18,7 +18,7 @@ interface AuthContextType extends AuthState {
   signup: (email: string, password: string, name: string, captchaToken: string) => Promise<void>;
   logout: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
-  brevotresetPassword: (email: string) => Promise<void>;
+  brevoResetPassword: (email: string) => Promise<void>;
   updateUserProfile: (name: string) => Promise<void>;
   getIdToken: () => Promise<string | null>;
 }
@@ -50,7 +50,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       const response = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/_api/users/profile`, {
         headers: {
           Authorization: `Bearer ${token}`,
-          "x-captcha-token": captchaToken
+          ...(captchaToken && { "x-captcha-token": captchaToken })
         },
       });
       return response.data;
@@ -179,7 +179,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   };
 
   //To send the reset password mail through mailjet
-  const brevotresetPassword = async (email: string) => {
+  const brevoResetPassword = async (email: string) => {
     try {
       await userService.forgotPassword(email);
     }
@@ -236,7 +236,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     signup,
     logout,
     resetPassword,
-    brevotresetPassword,
+    brevoResetPassword,
     updateUserProfile,
     getIdToken,
   };

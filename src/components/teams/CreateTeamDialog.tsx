@@ -97,7 +97,7 @@ export const CreateTeamDialog = ({
             rows={3}
             {...register('description')}
             error={!!errors.description}
-            helperText={errors.description?.message || 'Optional: Describe what this team does'}
+            helperText={errors.description?.message || 'Optional'}
             placeholder="e.g., Core AI engineering group..."
           />
         </Box>
