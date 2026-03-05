@@ -14,22 +14,22 @@ import {
 } from '@mui/material';
 import {
   MoreVert as MoreIcon,
-  Key as KeyIcon,
-  Person as PersonIcon,
+  People as PeopleIcon,
+  Folder as ProjectIcon,
   Timeline as ActivityIcon,
 } from '@mui/icons-material';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
-import { Project } from '@/types/api';
+import { Team } from '@/types/api';
 
-interface ProjectCardProps {
-  project: Project;
-  onEdit: (project: Project) => void;
-  onDelete: (projectId: string) => void;
+interface TeamCardProps {
+  team: Team;
+  onEdit: (team: Team) => void;
+  onDelete: (teamId: string) => void;
 }
 
-export const ProjectCard = ({ project, onEdit, onDelete }: ProjectCardProps) => {
+export const TeamCard = ({ team, onEdit, onDelete }: TeamCardProps) => {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const navigate = useNavigate();
 
@@ -43,19 +43,19 @@ export const ProjectCard = ({ project, onEdit, onDelete }: ProjectCardProps) => 
   };
 
   const handleCardClick = () => {
-    navigate(`/projects/${project.id}`);
+    navigate(`/teams/${team.id}`);
   };
 
   const handleEdit = (event: React.MouseEvent) => {
     event.stopPropagation();
     handleMenuClose();
-    onEdit(project);
+    onEdit(team);
   };
 
   const handleDelete = (event: React.MouseEvent) => {
     event.stopPropagation();
     handleMenuClose();
-    onDelete(project.id);
+    onDelete(team.id);
   };
 
   const getMemberRole = (role: string) => {
@@ -71,7 +71,7 @@ export const ProjectCard = ({ project, onEdit, onDelete }: ProjectCardProps) => 
     }
   };
 
-  const userRole = project.role || 'member';
+  const userRole = team.role || 'member';
   const canEdit = userRole === 'owner' || userRole === 'admin';
   const canDelete = userRole === 'owner';
 
@@ -91,7 +91,7 @@ export const ProjectCard = ({ project, onEdit, onDelete }: ProjectCardProps) => 
       <CardContent sx={{ pb: 1 }}>
         <Box display="flex" justifyContent="space-between" alignItems="flex-start" mb={2}>
           <Typography variant="h6" component="h3" noWrap sx={{ flex: 1, mr: 1 }}>
-            {project.name}
+            {team.name}
           </Typography>
           <IconButton
             size="small"
@@ -102,7 +102,7 @@ export const ProjectCard = ({ project, onEdit, onDelete }: ProjectCardProps) => 
           </IconButton>
         </Box>
 
-        {project.description && (
+        {team.description && (
           <Typography
             variant="body2"
             color="text.secondary"
@@ -114,21 +114,21 @@ export const ProjectCard = ({ project, onEdit, onDelete }: ProjectCardProps) => 
               overflow: 'hidden',
             }}
           >
-            {project.description}
+            {team.description}
           </Typography>
         )}
 
         <Box display="flex" alignItems="center" gap={2} mb={2}>
           <Box display="flex" alignItems="center" gap={0.5}>
-            <KeyIcon fontSize="small" color="action" />
+            <PeopleIcon fontSize="small" color="action" />
             <Typography variant="body2" color="text.secondary">
-              {project.apiKeyCount} keys
+              {team.memberCount} members
             </Typography>
           </Box>
           <Box display="flex" alignItems="center" gap={0.5}>
-            <PersonIcon fontSize="small" color="action" />
+            <ProjectIcon fontSize="small" color="action" />
             <Typography variant="body2" color="text.secondary">
-              {project.memberCount} members
+              {team.projectCount} projects
             </Typography>
           </Box>
           <Box display="flex" alignItems="center" gap={0.5}>
@@ -141,13 +141,12 @@ export const ProjectCard = ({ project, onEdit, onDelete }: ProjectCardProps) => 
 
         <Box display="flex" alignItems="center" justifyContent="space-between">
           <AvatarGroup max={4} sx={{ '& .MuiAvatar-root': { width: 24, height: 24, fontSize: '0.75rem' } }}>
-            {project.members ? project.members.slice(0, 4).map((member, index) => (
+            {team.members ? team.members.slice(0, 4).map((member, index) => (
               <Avatar key={member.memberUserId} sx={{ bgcolor: 'primary.main' }}>
-                {String.fromCharCode(65 + index)}
+                {member.name ? member.name.charAt(0).toUpperCase() : String.fromCharCode(65 + index)}
               </Avatar>
             )) : (
-              // Show placeholder avatars based on memberCount when members array is not available
-              Array.from({ length: Math.min(4, project.memberCount) }).map((_, index) => (
+              Array.from({ length: Math.min(4, team.memberCount) }).map((_, index) => (
                 <Avatar key={index} sx={{ bgcolor: 'primary.main' }}>
                   {String.fromCharCode(65 + index)}
                 </Avatar>
@@ -163,19 +162,13 @@ export const ProjectCard = ({ project, onEdit, onDelete }: ProjectCardProps) => 
         </Box>
 
         <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
-          Updated {formatDistanceToNow(new Date(project.updatedAt), { addSuffix: true })}
+          Updated {formatDistanceToNow(new Date(team.updatedAt), { addSuffix: true })}
         </Typography>
       </CardContent>
 
       <CardActions sx={{ pt: 0, px: 2, pb: 2 }}>
-        <Button size="small" onClick={(e) => { e.stopPropagation(); navigate(`/projects/${project.id}`); }}>
+        <Button size="small" onClick={(e) => { e.stopPropagation(); navigate(`/teams/${team.id}`); }}>
           View Details
-        </Button>
-        <Button 
-          size="small" 
-          onClick={(e) => { e.stopPropagation(); navigate(`/projects/${project.id}/analytics`); }}
-        >
-          Analytics
         </Button>
       </CardActions>
 
@@ -187,12 +180,12 @@ export const ProjectCard = ({ project, onEdit, onDelete }: ProjectCardProps) => 
       >
         {canEdit && (
           <MenuItem onClick={handleEdit}>
-            Edit Project
+            Edit Team
           </MenuItem>
         )}
         {canDelete && (
           <MenuItem onClick={handleDelete} sx={{ color: 'error.main' }}>
-            Delete Project
+            Delete Team
           </MenuItem>
         )}
       </Menu>

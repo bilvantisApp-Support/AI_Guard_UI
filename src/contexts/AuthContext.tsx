@@ -11,12 +11,14 @@ import {
 import { auth } from '@/config/firebase';
 import { User, AuthState } from '@/types/user';
 import axios from 'axios';
+import { userService } from '@/services/userService';
 
 interface AuthContextType extends AuthState {
   login: (email: string, password: string) => Promise<void>;
-  signup: (email: string, password: string, name: string) => Promise<void>;
+  signup: (email: string, password: string, name: string, captchaToken: string) => Promise<void>;
   logout: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
+  brevoResetPassword: (email: string) => Promise<void>;
   updateUserProfile: (name: string) => Promise<void>;
   getIdToken: () => Promise<string | null>;
 }
@@ -42,12 +44,13 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     error: null,
   });
 
-  const fetchUserProfile = async (firebaseUser: FirebaseUser): Promise<User | null> => {
+  const fetchUserProfile = async (firebaseUser: FirebaseUser, captchaToken?: string): Promise<User | null> => {
     try {
       const token = await firebaseUser.getIdToken();
       const response = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/_api/users/profile`, {
         headers: {
           Authorization: `Bearer ${token}`,
+          ...(captchaToken && { "x-captcha-token": captchaToken })
         },
       });
       return response.data;
@@ -114,16 +117,29 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     }
   };
 
-  const signup = async (email: string, password: string, name: string) => {
+  const signup = async (email: string, password: string, name: string, captchaToken: string) => {
     try {
+
+      if (!email.toLowerCase().endsWith('@bilvantis.io')) {
+        throw new Error('Only Bilvantis email addresses are allowed');
+      }
+
+      if (!captchaToken) {
+        throw new Error("Captcha required");
+      }
+
+      if (!/^[A-Za-z\s]+$/.test(name.trim())) {
+        throw new Error('Name must contain only letters');
+      }
+
       setState((prev) => ({ ...prev, error: null }));
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      
+
       if (name) {
         await updateProfile(userCredential.user, { displayName: name });
       }
 
-     await userCredential.user.getIdToken();
+      await fetchUserProfile(userCredential.user, captchaToken);
     } catch (error: any) {
       setState((prev) => ({
         ...prev,
@@ -149,7 +165,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       throw error;
     }
   };
-
+  //Existing resetpassword sevice of firebase
   const resetPassword = async (email: string) => {
     try {
       await sendPasswordResetEmail(auth, email);
@@ -161,6 +177,21 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       throw error;
     }
   };
+
+  //To send the reset password mail through mailjet
+  const brevoResetPassword = async (email: string) => {
+    try {
+      await userService.forgotPassword(email);
+    }
+    catch (error: any) {
+      setState(prev => ({
+        ...prev,
+        error: error.response?.data?.message || error.message || "Failed to send reset email"
+      }));
+      throw error;
+    }
+  };
+
 
   const updateUserProfile = async (name: string) => {
     try {
@@ -205,6 +236,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     signup,
     logout,
     resetPassword,
+    brevoResetPassword,
     updateUserProfile,
     getIdToken,
   };

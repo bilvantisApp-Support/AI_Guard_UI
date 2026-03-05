@@ -1,9 +1,9 @@
 import { apiClient } from './api';
-import { User, PersonalAccessToken, TokensResponse, CreateTokenRequest, APIUser } from '@/types/user';
+import { PersonalAccessToken, TokensResponse, CreateTokenRequest, APIUser } from '@/types/user';
 
 export const userService = {
-  async getProfile(): Promise<User> {
-    return apiClient.get<User>('/_api/users/profile');
+  async getProfile(): Promise<APIUser> {
+    return apiClient.get<APIUser>('/_api/users/profile');
   },
 
   async getActiveUsers(): Promise<APIUser[]> {
@@ -15,12 +15,12 @@ export const userService = {
     return users;
   },
 
-  async updateProfile(data: { name?: string }): Promise<User> {
-    return apiClient.put<User>('/_api/users/profile', data);
+  async updateProfile(data: { name?: string }): Promise<APIUser> {
+    return apiClient.put<APIUser>('/_api/users/profile', data);
   },
 
-  async createProfile(data: { name?: string }): Promise<User> {
-    return apiClient.post<User>('/_api/users/profile', data);
+  async createProfile(data: { name?: string }): Promise<APIUser> {
+    return apiClient.post<APIUser>('/_api/users/profile', data);
   },
 
   async getTokens(): Promise<PersonalAccessToken[]> {
@@ -49,5 +49,11 @@ export const userService = {
 
   async deleteToken(tokenId: string): Promise<void> {
     return apiClient.delete<void>(`/_api/users/tokens/${tokenId}`);
+  },
+
+  async forgotPassword(email: string): Promise<void> {
+    await apiClient.post("/_api/users/forgot-password", {
+      email
+    });
   },
 };

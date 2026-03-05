@@ -22,7 +22,7 @@ interface FormData {
   role: 'admin' | 'member';
 }
 
-interface InviteMemberDialogProps {
+interface InviteTeamMemberDialogProps {
   open: boolean;
   onClose: () => void;
   onSubmit: (data: FormData) => Promise<void>;
@@ -36,23 +36,23 @@ const schema = yup.object({
     .required('Email is required'),
   role: yup
     .mixed<'admin' | 'member'>()
-    .oneOf([ 'admin', 'member'])
+    .oneOf(['admin', 'member'])
     .required('Role is required'),
 });
 
-export const InviteMemberDialog = ({
+export const InviteTeamMemberDialog = ({
   open,
   onClose,
   onSubmit,
   loading,
-}: InviteMemberDialogProps) => {
+}: InviteTeamMemberDialogProps) => {
   const [search, setSearch] = useState('');
   const {
     register,
     handleSubmit,
     formState: { errors },
     reset,
-    control
+    control,
   } = useForm<FormData>({
     resolver: yupResolver(schema),
     defaultValues: {
@@ -87,15 +87,15 @@ export const InviteMemberDialog = ({
     onClose();
   };
 
-  useEffect(()=>{
-    if(open){
+  useEffect(() => {
+    if (open) {
       reset();
     }
-  },[open,reset])
+  }, [open, reset]);
 
   return (
     <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
-      <DialogTitle>Invite Member</DialogTitle>
+      <DialogTitle>Invite Team Member</DialogTitle>
 
       <DialogContent>
         <Box display="flex" flexDirection="column" gap={3} pt={1}>
@@ -137,7 +137,6 @@ export const InviteMemberDialog = ({
               />
             )}
           />
-
 
           <TextField
             select

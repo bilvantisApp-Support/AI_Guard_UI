@@ -31,7 +31,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { projectService } from '@/services/projectService';
 import { userService } from '@/services/userService';
 import { useNotification } from '@/hooks/useNotification';
-import type { PersonalAccessToken } from '@/types/user';
+import type { APIUser, PersonalAccessToken } from '@/types/user';
 import type { Project } from '@/types/api';
 
 interface TokenCardProps {
@@ -55,6 +55,15 @@ export const TokenCard = ({ token, onDelete, onCopy }: TokenCardProps) => {
     queryFn: projectService.getProjects,
     staleTime: 5 * 60 * 1000,
   });
+
+  const { data: User } = useQuery<APIUser>({
+    queryKey: ['profile'],
+    queryFn: userService.getProfile,
+    staleTime: 5 * 60 * 1000
+  });
+
+  const userRole = User?.role;
+  const canManageToken = userRole === 'owner' || userRole === 'admin';
 
   const projectName = token.projectId 
     ? projects.find(p => p.id === token.projectId)?.name || `Project ${token.projectId}`
@@ -161,9 +170,9 @@ export const TokenCard = ({ token, onDelete, onCopy }: TokenCardProps) => {
               color={getStatusColor()}
               variant="outlined"
             />
-            <IconButton size="small" onClick={handleMenuClick}>
+            {canManageToken && <IconButton size="small" onClick={handleMenuClick}>
               <MoreIcon />
-            </IconButton>
+            </IconButton>}
           </Box>
         </Box>
 
@@ -222,9 +231,11 @@ export const TokenCard = ({ token, onDelete, onCopy }: TokenCardProps) => {
               Token value hidden for security
             </Typography>
             <Tooltip title="Rotate token to get new value">
-              <IconButton 
-                size="small" 
-                onClick={() => setRotateDialogOpen(true)}
+              <IconButton
+                size="small"
+                onClick={() => {
+                  if (canManageToken) setRotateDialogOpen(true)
+                }}
                 disabled={isRevoked}
               >
                 <RefreshIcon />

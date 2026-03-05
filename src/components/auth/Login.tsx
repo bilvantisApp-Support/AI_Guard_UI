@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
@@ -40,8 +40,7 @@ export const Login = () => {
   const location = useLocation();
   const { notify } = useNotification();
 
-  const from = location.state?.from?.pathname || '/dashboard';
-
+  const from = location.state?.from?.pathname || '/projects';
   const {
     register,
     handleSubmit,

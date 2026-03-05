@@ -31,32 +31,54 @@ import {
   Logout as LogoutIcon,
   ChevronLeft as ChevronLeftIcon,
   BugReport as DebugIcon,
+  SupervisedUserCircle,
 } from '@mui/icons-material';
 import { useAuth } from '@/contexts/AuthContext';
+import { useQuery } from '@tanstack/react-query';
+import { APIUser } from '@/types/user';
+import { userService } from '@/services/userService';
 
 const drawerWidth = 240;
 
 const menuItems = [
-  { text: 'Dashboard', icon: <DashboardIcon />, path: '/dashboard' },
-  { text: 'Projects', icon: <ProjectIcon />, path: '/projects' },
-  { text: 'Analytics', icon: <AnalyticsIcon />, path: '/analytics' },
-  { text: 'Teams', icon: <TeamIcon />, path: '/teams' },
-  { text: 'Access Tokens', icon: <TokenIcon />, path: '/tokens' },
-  { text: 'API Debug', icon: <DebugIcon />, path: '/debug' },
+  { text: 'Dashboard', icon: <DashboardIcon />, path: '/dashboard', roles: ['owner', 'admin'] },
+  { text: 'Projects', icon: <ProjectIcon />, path: '/projects', roles: ['owner', 'admin', 'member'] },
+  { text: 'Analytics', icon: <AnalyticsIcon />, path: '/analytics', roles: ['owner', 'admin'] },
+  { text: 'Teams', icon: <TeamIcon />, path: '/teams', roles: ['owner', 'admin', 'member'] },
+  { text: 'Users', icon: <SupervisedUserCircle />, path: '/users', roles: ['owner'] },
+  { text: 'Access Tokens', icon: <TokenIcon />, path: '/tokens', roles: ['owner', 'admin', 'member'] },
+  { text: 'API Debug', icon: <DebugIcon />, path: '/debug', roles: ['owner', 'admin'] },
 ];
 
 export const Layout = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(true);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const navigate = useNavigate();
   const location = useLocation();
   const { user, logout } = useAuth();
 
   const handleDrawerToggle = () => {
-    setMobileOpen(!mobileOpen);
+    if (isMobile) {
+      setMobileOpen(!mobileOpen);
+    } else {
+      setDrawerOpen(!drawerOpen)
+    }
   };
+
+  const { data: User } = useQuery<APIUser>({
+    queryKey: ['profile'],
+    queryFn: userService.getProfile,
+    staleTime: 5 * 60 * 1000
+  });
+
+  const userRole = User?.role;
+
+  const filteredMenuItems = userRole
+    ? menuItems.filter(item => item.roles.includes(userRole))
+    : [];
 
   const handleMenuClick = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
@@ -89,7 +111,7 @@ export const Layout = () => {
       </Toolbar>
       <Divider />
       <List>
-        {menuItems.map((item) => (
+        {filteredMenuItems.map((item) => (
           <ListItem key={item.text} disablePadding>
             <ListItemButton
               selected={location.pathname === item.path}
@@ -115,8 +137,13 @@ export const Layout = () => {
       <AppBar
         position="fixed"
         sx={{
-          width: { sm: `calc(100% - ${drawerWidth}px)` },
-          ml: { sm: `${drawerWidth}px` },
+          width: {
+            sm: drawerOpen ? `calc(100% - ${drawerWidth}px)` : '100%'
+          },
+          ml: {
+            sm: drawerOpen ? `${drawerWidth}px` : 0
+          },
+          transition: 'all 0.3s ease'
         }}
       >
         <Toolbar>
@@ -125,12 +152,12 @@ export const Layout = () => {
             aria-label="open drawer"
             edge="start"
             onClick={handleDrawerToggle}
-            sx={{ mr: 2, display: { sm: 'none' } }}
+            sx={{ mr: 2 }}
           >
             <MenuIcon />
           </IconButton>
           <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
-            {menuItems.find((item) => item.path === location.pathname)?.text || 'AI Guard'}
+            {filteredMenuItems.find((item) => item.path === location.pathname)?.text || 'AI Guard'}
           </Typography>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             <Typography variant="body2">{user?.email}</Typography>
@@ -144,11 +171,11 @@ export const Layout = () => {
       </AppBar>
       <Box
         component="nav"
-        sx={{ width: { sm: drawerWidth }, flexShrink: { sm: 0 } }}
+        sx={{ width: { sm: drawerOpen ? drawerWidth : 0 }, flexShrink: { sm: 0 }, transition: 'all 0.3s ease' }}
       >
         <Drawer
-          variant={isMobile ? 'temporary' : 'permanent'}
-          open={isMobile ? mobileOpen : true}
+          variant="persistent"
+          open={isMobile ? mobileOpen : drawerOpen}
           onClose={handleDrawerToggle}
           ModalProps={{
             keepMounted: true,
@@ -157,6 +184,9 @@ export const Layout = () => {
             '& .MuiDrawer-paper': {
               boxSizing: 'border-box',
               width: drawerWidth,
+              position: 'fixed',
+              overflowX: 'hidden',
+              transition: 'all 0.3s ease',
             },
           }}
         >
@@ -168,7 +198,8 @@ export const Layout = () => {
         sx={{
           flexGrow: 1,
           p: 3,
-          width: { sm: `calc(100% - ${drawerWidth}px)` },
+          width: '100%',
+          transition: 'all 0.3s ease',
           mt: 8,
         }}
       >

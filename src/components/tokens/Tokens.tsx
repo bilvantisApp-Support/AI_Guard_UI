@@ -10,6 +10,8 @@ import {
   DialogActions,
   Paper,
   IconButton,
+  Tabs,
+  Tab,
 } from '@mui/material';
 import Grid from '@mui/material/Grid';
 import {
@@ -23,9 +25,9 @@ import { TokenCard } from './TokenCard';
 import { CreateTokenDialog } from './CreateTokenDialog';
 import { userService } from '@/services/userService';
 import { useNotification } from '@/hooks/useNotification';
-import type { PersonalAccessToken, CreateTokenRequest } from '@/types/user';
+import type { PersonalAccessToken, CreateTokenRequest, APIUser } from '@/types/user';
+import { PROVIDER_CONFIG } from '@/config/providerConfig';
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 export const Tokens = () => {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
@@ -33,6 +35,7 @@ export const Tokens = () => {
     open: boolean;
     token?: PersonalAccessToken;
   }>({ open: false });
+  const [codeTab, setCodeTab] = useState<'curl' | 'node' | 'python' | 'Java'>('curl');
 
   const { notify } = useNotification();
   const queryClient = useQueryClient();
@@ -54,7 +57,9 @@ export const Tokens = () => {
       setNewTokenDialog({ open: true, token: newToken });
     },
     onError: (error: any) => {
-      notify(error.message || 'Failed to create token', { type: 'error' });
+      const message =
+        error.response.data.error.message || 'Failed to create token';
+      notify(message, { type: 'error' });
     },
   });
 
@@ -65,48 +70,19 @@ export const Tokens = () => {
       notify('Token deleted successfully!', { type: 'success' });
     },
     onError: (error: any) => {
-      notify(error.message || 'Failed to delete token', { type: 'error' });
+      notify(error?.response?.data?.error?.message || 'Failed to delete token', { type: 'error' });
     },
   });
 
-  // Mock data fallback when API is not available
-  const mockTokens: PersonalAccessToken[] = [
-    {
-      id: '1',
-      name: 'Production API Token',
-      // token value hidden for security in list view
-      scopes: ['api:read', 'api:write', 'projects:read'],
-      projectId: undefined,
-      lastUsedAt: '2024-07-22T08:30:00Z',
-      expiresAt: '2024-08-01T00:00:00Z',
-      isRevoked: false,
-      createdAt: '2024-07-01T00:00:00Z',
-    },
-    {
-      id: '2',
-      name: 'Mobile App Development',
-      // token value hidden for security in list view
-      scopes: ['api:read', 'projects:read'],
-      projectId: 'project-123',
-      lastUsedAt: null,
-      expiresAt: '2024-10-15T00:00:00Z',
-      isRevoked: false,
-      createdAt: '2024-07-15T00:00:00Z',
-    },
-    {
-      id: '3',
-      name: 'Legacy Integration',
-      // token value hidden for security in list view
-      scopes: ['api:read', 'api:write', 'projects:read', 'projects:write'],
-      projectId: undefined,
-      lastUsedAt: '2024-06-15T12:00:00Z',
-      expiresAt: '2024-07-25T00:00:00Z', // Expires soon
-      isRevoked: false,
-      createdAt: '2024-06-01T00:00:00Z',
-    },
-  ];
+  const { data: User } = useQuery<APIUser>({
+    queryKey: ['profile'],
+    queryFn: userService.getProfile,
+    staleTime: 5 * 60 * 1000
+  });
+  const userRole = User?.role;
+  const canCreateToken = userRole === 'owner' || userRole === 'admin';
 
-  const displayTokens = error ? mockTokens : (tokens || []);
+  const displayTokens = tokens || [];
 
   // Ensure displayTokens is always an array
   const safeDisplayTokens = Array.isArray(displayTokens) ? displayTokens : [];
@@ -122,34 +98,11 @@ export const Tokens = () => {
   }
 
   const handleCreateToken = async (data: CreateTokenRequest) => {
-    if (error) {
-      // Simulate creation in demo mode
-      const mockToken: PersonalAccessToken = {
-        id: Date.now().toString(),
-        name: data.name,
-        token: `pat_${Math.random().toString(36).substring(2, 15)}${Math.random().toString(36).substring(2, 15)}${Math.random().toString(36).substring(2, 15)}`,
-        scopes: data.scopes,
-        projectId: data.projectId,
-        lastUsedAt: null,
-        expiresAt: data.expiresInDays ? new Date(Date.now() + data.expiresInDays * 24 * 60 * 60 * 1000).toISOString() : null,
-        isRevoked: false,
-        createdAt: new Date().toISOString(),
-      };
-      setCreateDialogOpen(false);
-      setNewTokenDialog({ open: true, token: mockToken });
-      notify('Demo mode: Token would be created in real implementation', { type: 'info' });
-      return mockToken;
-    }
     const Token1 = await createMutation.mutateAsync(data);
-
     return Token1;
   };
 
   const handleDeleteToken = async (tokenId: string) => {
-    if (error) {
-      notify('Demo mode: Token would be deleted in real implementation', { type: 'info' });
-      return;
-    }
     await deleteMutation.mutateAsync(tokenId);
   };
 
@@ -168,56 +121,90 @@ export const Tokens = () => {
     }
   };
 
-  const generateCurlURL = (token: String, provider: 'openai' | 'anthropic' | 'gemini') => {
+  const getProvider = (): 'openai' | 'anthropic' | 'gemini' =>
+    (newTokenDialog.token?.llmProvider as any) || 'openai';
 
-    if (!provider) {
-      return 'No Provider Selected';
+  const generateCurlURL = (token: string) => {
+    const provider = getProvider();
+    const config = PROVIDER_CONFIG[provider];
+
+    return `curl -X POST ${config.endpoint} \\
+  -H "Content-Type: application/json" \\
+  -H "Authorization: Bearer ${token}" \\
+  -H "x-ai-guard-provider: ${provider}" \\
+  -d '${config.curlBody}'`;
+  };
+
+  const generateNodeCode = (token: string) => {
+    const provider = getProvider();
+    const config = PROVIDER_CONFIG[provider];
+
+    return `
+      // Install required SDK
+      //${config.nodeInstall}
+      ${config.nodeImport}
+
+      const client = ${config.nodeClient}({
+        apiKey: "${token}",
+        baseURL: "${config.basePoint}",
+        defaultHeaders: {
+          "x-ai-guard-provider": "${provider}"
+        }
+      });
+
+      async function main() {
+        const response = await ${config.nodeCall};
+
+        console.log(response);
+      }
+
+      main().catch(console.error);`;
+  };
+
+
+  const generatePythonCode = (token: string) => {
+    const provider = getProvider();
+    const config = PROVIDER_CONFIG[provider];
+
+    return `# Install required SDK
+# ${config.pythonInstall}
+${config.pythonImport}
+
+client = ${config.pythonClient}(
+    api_key="${token}",
+    base_url="${config.basePoint}",
+    default_headers={
+        "x-ai-guard-provider": "${provider}"
     }
-    const baseHeaders = `-H "Content-Type: application/json" \\
-          -H "Authorization: Bearer ${token}" \\
-          -H "X-AI-Guard-Provider: ${provider}"`;
+)
 
-    switch (provider) {
-      case 'openai':
-        return `curl -X POST ${BASE_URL}/v1/chat/completions \\
-          ${baseHeaders} \\
-          -d '{
-            "model": "gpt-4",
-            "messages": [
-              { "role": "user", "content": "Hello!" }
-            ]
-          }'`;
-      case 'gemini':
-        return `curl -X POST ${BASE_URL}/v1beta/models/:model/generateContent \\
-          ${baseHeaders} \\
-          -d '{
-            "contents": [
-              {
-                "role": "user",
-                "parts": [
-                  {
-                    "text": "Hello!"
-                  }
-                ]
-              }
-            ]
-          }'`;
+response = ${config.pythonCall}
 
-      case 'anthropic':
-        return `curl -X POST ${BASE_URL}/v1/messages \\
-          ${baseHeaders} \\
-          -d '{
-            "model": "claude-3-sonnet-20240229",
-            "max_tokens": 256,
-            "messages": [
-              { "role": "user", "content": "Hello!" }
-            ]
-          }'`;
+print(response.output_text)`;
+  };
 
-      default:
-        return 'No Provider Selected'
-    }
-  }
+  const generateJavaCode = (token: string) => {
+    const provider = getProvider();
+    const config = PROVIDER_CONFIG[provider];
+
+    return `
+    // Install dependency:
+    // ${config.javaInstall}
+      ${config.javaImport}
+
+    public class Main {
+
+        public static void main(String[] args) {
+
+            String token = "${token}";
+            String BASE_URL = "${config.basePoint}";
+
+            ${config.javaClient}
+
+            ${config.javaCall}
+        }
+    }`;
+  };
 
   return (
     <Box>
@@ -225,18 +212,18 @@ export const Tokens = () => {
         <Typography variant="h4" component="h1">
           Personal Access Tokens
         </Typography>
-        <Button
+        {canCreateToken && <Button
           variant="contained"
           startIcon={<AddIcon />}
           onClick={() => setCreateDialogOpen(true)}
         >
           Create Token
-        </Button>
+        </Button>}
       </Box>
 
       {error && (
         <Alert severity="info" sx={{ mb: 3 }}>
-          Using demo data - backend API not available. Connect your AI Guard server to manage real tokens.
+          Failed to load tokens. Please try again.
         </Alert>
       )}
 
@@ -254,13 +241,13 @@ export const Tokens = () => {
           <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
             Create your first personal access token to authenticate API requests
           </Typography>
-          <Button
+          {canCreateToken && <Button
             variant="contained"
             startIcon={<AddIcon />}
             onClick={() => setCreateDialogOpen(true)}
           >
             Create Your First Token
-          </Button>
+          </Button>}
         </Paper>
       ) : (
         <Grid container spacing={3}>
@@ -329,27 +316,76 @@ export const Tokens = () => {
             </IconButton>
           </Box>
 
-          <Typography variant="body2" color="text.secondary">
-            Use this token to authenticate your API requests by including it in the Authorization header:
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            Use this token to authenticate your API requests:
           </Typography>
 
-          <Box
-            component="pre"
-            sx={{
-              bgcolor: 'grey.900',
-              color: 'white',
-              p: 2,
-              borderRadius: 1,
-              mt: 2,
-              fontSize: '0.8rem',
-              overflow: 'auto',
-            }}
+          <Tabs
+            value={codeTab}
+            onChange={(_, v) => setCodeTab(v)}
+            sx={{ mb: 2 }}
           >
-            {generateCurlURL(
-              newTokenDialog.token?.token || '',
-              newTokenDialog.token?.llmProvider!
-            )}
+            <Tab label="cURL" value="curl" />
+            <Tab label="Node.js" value="node" />
+            <Tab label="Python" value="python" />
+            <Tab label="Java" value="Java" />
+          </Tabs>
+
+          <Box sx={{ position: 'relative' }}>
+            {/* Copy Button */}
+            <IconButton
+              size="small"
+              onClick={() => {
+                const token = newTokenDialog.token?.token || '';
+                let code = '';
+
+                if (codeTab === 'curl') code = generateCurlURL(token);
+                if (codeTab === 'node') code = generateNodeCode(token);
+                if (codeTab === 'python') code = generatePythonCode(token);
+                if (codeTab === 'Java') code = generateJavaCode(token);
+
+                navigator.clipboard.writeText(code);
+                notify('Copied to clipboard!', { type: 'success' });
+              }}
+              sx={{
+                position: 'absolute',
+                right: 8,
+                top: 8,
+                color: 'white',
+                bgcolor: 'rgba(255,255,255,0.16)',
+                '&:hover': { bgcolor: 'rgba(255,255,255,0.28)' },
+                zIndex: 1,
+              }}
+            >
+              <CopyIcon fontSize="small" />
+            </IconButton>
+
+            <Box
+              component="pre"
+              sx={{
+                bgcolor: 'grey.900',
+                color: 'white',
+                p: 2,
+                pt: 5,
+                borderRadius: 1,
+                fontSize: '0.8rem',
+                overflow: 'auto',
+              }}
+            >
+              {codeTab === 'curl' &&
+                generateCurlURL(newTokenDialog.token?.token || '')}
+
+              {codeTab === 'node' &&
+                generateNodeCode(newTokenDialog.token?.token || '')}
+
+              {codeTab === 'python' &&
+                generatePythonCode(newTokenDialog.token?.token || '')}
+
+              {codeTab === 'Java' &&
+                generateJavaCode(newTokenDialog.token?.token || '')}
+            </Box>
           </Box>
+
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 3 }}>
           <Button onClick={handleCopyNewToken} startIcon={<CopyIcon />}>

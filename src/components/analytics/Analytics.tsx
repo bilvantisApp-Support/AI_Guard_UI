@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import {
   Box,
   Typography,
@@ -45,6 +45,7 @@ import { exportNodeToPDF } from '../../utils/exportNodeToPDF';
 import { useQuery } from '@tanstack/react-query';
 import { analyticsService } from '@/services/analyticsService';
 import { AnalyticsDataResponse } from '@/types/analytics';
+import { useParams } from 'react-router-dom';
 
 export interface AnalyticsData {
   period: string;
@@ -82,8 +83,13 @@ export const Analytics = () => {
   };
   const theme = useTheme();
   const [timeRange, setTimeRange] = useState('7d');
-  const [selectedProject, setSelectedProject] = useState('all');
   const pdfRef = useRef<HTMLDivElement>(null);
+  const { id: projectIdFromRoute } = useParams<{ id: string }>();
+
+  const [selectedProject, setSelectedProject] = useState(
+    projectIdFromRoute ?? 'all'
+  );
+  
 
   const {
     data: analyticsData,
@@ -95,29 +101,11 @@ export const Analytics = () => {
     retry: 2,
   });
 
-  // Mock data since API might not be available
-  const mockAnalyticsData: AnalyticsData[] = [
-    { period: '2024-07-16', requests: 120, tokens: 15400, cost: 3.24, latency: 1.2, errors: 2 },
-    { period: '2024-07-17', requests: 145, tokens: 18900, cost: 3.89, latency: 1.1, errors: 1 },
-    { period: '2024-07-18', requests: 98, tokens: 12200, cost: 2.67, latency: 1.3, errors: 3 },
-    { period: '2024-07-19', requests: 167, tokens: 21300, cost: 4.56, latency: 1.0, errors: 0 },
-    { period: '2024-07-20', requests: 203, tokens: 26800, cost: 5.78, latency: 0.9, errors: 2 },
-    { period: '2024-07-21', requests: 189, tokens: 24100, cost: 5.23, latency: 1.1, errors: 1 },
-    { period: '2024-07-22', requests: 234, tokens: 31200, cost: 6.89, latency: 1.0, errors: 0 },
-  ];
-
-  const mockProviderData: ProviderData[] = [
-    { provider: 'OpenAI', requests: 820, cost: 15.67, color: '#00A67E' },
-    { provider: 'Anthropic', requests: 320, cost: 6.45, color: '#D97757' },
-    { provider: 'gemini', requests: 110, cost: 1.33, color: '#4285F4' },
-  ];
-
-  const mockModelData: ModelData[] = [
-    { model: 'GPT-4', requests: 456, tokens: 91200, cost: 12.34, avgLatency: 1.2 },
-    { model: 'GPT-3.5-turbo', requests: 364, tokens: 45600, cost: 3.33, avgLatency: 0.8 },
-    { model: 'Claude-3-Sonnet', requests: 320, tokens: 64000, cost: 6.45, avgLatency: 1.1 },
-    { model: 'Gemini-Pro', requests: 110, tokens: 15400, cost: 1.33, avgLatency: 1.0 },
-  ];
+  useEffect(() => {
+    if (projectIdFromRoute) {
+      setSelectedProject(projectIdFromRoute);
+    }
+  }, [projectIdFromRoute]);
 
   const formatTooltipValue = (value: number, name: string) => {
     if (name === 'cost') {
@@ -140,31 +128,24 @@ export const Analytics = () => {
     }
   };
 
-  let allAnalyticsData: AnalyticsData[] = analyticsError
-    ? mockAnalyticsData
-    : analyticsData && 'analytics' in analyticsData && Array.isArray(analyticsData.analytics)
-      ? analyticsData.analytics.map((item: any) => ({
-        ...item,
-        projectId: item.projectId ? String(item.projectId) : undefined,
-        latency: typeof item.latency === 'number' ? +(item.latency / 1000).toFixed(2) : 0,
-      }))
-      : mockAnalyticsData;
+  const allAnalyticsData: AnalyticsData[] =
+    analyticsData?.analytics?.map((item: any) => ({
+      ...item,
+      projectId: item.projectId ? String(item.projectId) : undefined,
+      latency:
+        typeof item.latency === 'number'
+          ? +(item.latency / 1000).toFixed(2)
+          : 0,
+    })) ?? [];
+
 
   const displayAnalyticsData: AnalyticsData[] = selectedProject === 'all'
     ? allAnalyticsData
     : allAnalyticsData.filter((item: any) => String(item.projectId) === String(selectedProject));
 
-  const displayProviderData: ProviderData[] = analyticsError
-    ? mockProviderData
-    : analyticsData && 'providers' in analyticsData && Array.isArray(analyticsData.providers)
-      ? analyticsData.providers
-      : mockProviderData;
+  const displayProviderData: ProviderData[] = analyticsData?.providers ?? [];
       
-  const displayModelData: ModelData[] = analyticsError
-    ? mockModelData
-    : analyticsData && 'models' in analyticsData && Array.isArray(analyticsData.models)
-      ? analyticsData.models
-      : mockModelData;
+  const displayModelData: ModelData[] =  analyticsData?.models ?? [];
 
   const totalRequests = displayAnalyticsData.reduce((sum, item) => sum + item.requests, 0);
   const totalTokens = displayAnalyticsData.reduce((sum, item) => sum + item.tokens, 0);
@@ -226,7 +207,7 @@ export const Analytics = () => {
 
 
         {analyticsError && (<Alert severity="info" sx={{ mb: 3 }}>
-          Using demo analytics data - connect your AI Guard server to see live usage analytics and detailed insights.
+          Failed to load analytics data. Please try again.
         </Alert>)}
 
       {/* Summary Stats */}
@@ -255,7 +236,7 @@ export const Analytics = () => {
           <StatCard
             title="Total Cost"
             value={`$${totalCost.toFixed(4)}`}
-            subtitle={`~$${(totalCost / 7).toFixed()}/day avg`}
+            subtitle={`~$${(totalCost / 7).toFixed(4)}/day avg`}
             icon={CostIcon}
             color="success"
             trend={{ value: -3.1, isPositive: false }}

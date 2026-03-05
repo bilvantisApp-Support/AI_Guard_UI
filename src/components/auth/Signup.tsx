@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
@@ -24,6 +24,8 @@ import {
 } from '@mui/icons-material';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNotification } from '@/hooks/useNotification';
+import { Turnstile } from "@marsidev/react-turnstile";
+import { otpService } from '@/services/otpService';
 
 const schema = yup.object({
   name: yup.string().required('Name is required'),
@@ -56,13 +58,21 @@ interface SignupFormData {
 export const Signup = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const [otp, setOtp] = useState('');
+  const [otpSent, setOtpSent] = useState(false);
+  const [otpVerified, setOtpVerified] = useState(false);
+  const [timer, setTimer] = useState<number>(0);
   const { signup, error } = useAuth();
   const navigate = useNavigate();
   const { notify } = useNotification();
+  // Enable sending OTP once the email service is ready
+  const SENT_OTP = true;
 
   const {
     register,
     handleSubmit,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<SignupFormData>({
     resolver: yupResolver(schema),
@@ -70,13 +80,83 @@ export const Signup = () => {
 
   const onSubmit = async (data: SignupFormData) => {
     try {
-      await signup(data.email, data.password, data.name);
+      if (!captchaToken) {
+        notify('Captcha validation failed', { type: 'error' });
+        return;
+      }
+      await signup(data.email, data.password, data.name, captchaToken);
       notify('Account created successfully!', { type: 'success' });
-      navigate('/dashboard');
+      navigate('/login');
     } catch (err: any) {
       notify(err.message || 'Signup failed', { type: 'error' });
     }
   };
+
+  useEffect(() => {
+    if (timer <= 0) {
+      return;
+    }
+    const interval = setInterval(() => {
+      setTimer((prev) => prev - 1)
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [timer]);
+
+  const handleOtpAndSignup = async () => {
+    try {
+      const name = watch('name');
+      const email = watch('email');
+
+      if (!name || typeof name !== 'string') {
+        notify('Name is required to send OTP', { type: 'error' });
+        return;
+      }
+
+      const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+      if (!email || typeof email !== 'string' || !emailRegex.test(email)) {
+        notify('Valid email is required to send OTP', { type: 'error' });
+        return;
+      }
+
+      if (!SENT_OTP) {
+        await handleSubmit(onSubmit)();
+        return;
+      }
+
+      if (!otpSent) {
+        await otpService.sendOTP({ email, name });
+        setOtpSent(true);
+        setTimer(180);
+        notify(otpSent ? 'OTP resent successfully' : 'OTP sent successfully', { type: 'success' });
+        return;
+      }
+
+      if (!otpVerified) {
+        const valid = await otpService.verifyOTP({ email, otp: otp });
+
+        if (!valid) {
+          notify('Invalid OTP', { type: 'error' });
+          return;
+        }
+
+        setOtpVerified(true);
+        notify('OTP verified successfully', { type: 'success' });
+        return;
+      }
+
+      // Only signup after OTP verified
+      await handleSubmit(onSubmit)();
+
+    } catch (err: any) {
+      notify(err.message || 'Operation failed', { type: 'error' });
+    }
+  };
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs < 10 ? 0 : ''}${secs}`;
+  }
 
   return (
     <Container component="main" maxWidth="xs">
@@ -125,7 +205,7 @@ export const Signup = () => {
             </Alert>
           )}
 
-          <Box component="form" onSubmit={handleSubmit(onSubmit)} sx={{ mt: 1, width: '100%' }}>
+          <Box component="form" sx={{ mt: 1, width: '100%' }}>
             <TextField
               margin="normal"
               required
@@ -199,6 +279,51 @@ export const Signup = () => {
                 ),
               }}
             />
+            <Box sx={{ mt: 2, display: "flex", justifyContent: "center" }}>
+              <Turnstile
+                siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY}
+                onSuccess={(token) => setCaptchaToken(token)}
+                onExpire={() => setCaptchaToken(null)}
+              />
+            </Box>
+            {otpSent && (
+              <TextField
+                margin="normal"
+                required
+                fullWidth
+                label="Enter OTP"
+                value={otp}
+                onChange={(e) => setOtp(e.target.value)}
+              />
+            )}
+            {otpSent && !otpVerified && (
+              <Box sx={{ mt: 1 }}>
+                <Typography variant="body2">
+                  Didn't receive the code?
+                </Typography>
+
+                {timer > 0 ? (
+                  <Typography sx={{ flex: "column" }} variant="body2" color="text.secondary">
+                    Resend OTP in {formatTime(timer)}
+                  </Typography>
+                ) : (
+                  <Button
+                    size="small"
+                    sx={{ flex: "column" }}
+                    onClick={async () => {
+                      const name = watch('name');
+                      const email = watch('email');
+
+                      await otpService.sendOTP({ email, name });
+                      setTimer(180);
+                      notify('OTP resent successfully', { type: 'success' });
+                    }}
+                  >
+                    Resend OTP
+                  </Button>
+                )}
+              </Box>
+            )}
             <FormControlLabel
               control={
                 <Checkbox
@@ -224,13 +349,16 @@ export const Signup = () => {
               </Typography>
             )}
             <Button
-              type="submit"
+              type="button"
               fullWidth
               variant="contained"
               sx={{ mt: 3, mb: 2 }}
-              disabled={isSubmitting}
+              disabled={isSubmitting || !captchaToken}
+              onClick={handleOtpAndSignup}
             >
-              {isSubmitting ? 'Creating account...' : 'Sign Up'}
+              {
+                !SENT_OTP ? 'Sign Up' : !otpSent ? 'Send OTP' : !otpVerified ? 'Verify OTP' : 'Sign Up'
+              }
             </Button>
             <Box sx={{ textAlign: 'center' }}>
               <Divider sx={{ my: 2 }} />
