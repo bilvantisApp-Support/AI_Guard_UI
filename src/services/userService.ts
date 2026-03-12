@@ -56,5 +56,4 @@ export const userService = {
       email
     });
   },
-
 };

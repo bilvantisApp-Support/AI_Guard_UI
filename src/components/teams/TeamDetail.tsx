@@ -779,7 +779,6 @@ export const TeamDetail = () => {
         assignedProjects={assignedProjects}
       />
 
-
       <Dialog
         open={deleteDialog.open}
         onClose={() => setDeleteDialog({ open: false })}

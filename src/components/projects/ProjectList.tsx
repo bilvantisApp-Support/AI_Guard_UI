@@ -88,6 +88,24 @@ export const ProjectList = () => {
     },
   });
 
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: UpdateProject }) =>
+      projectService.updateProject(id, data),
+
+    onSuccess: (_res, vars) => {
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
+      queryClient.invalidateQueries({ queryKey: ['project', vars.id] });
+      notify('Project updated successfully', { type: 'success' });
+    },
+
+    onError: (error: any) => {
+      notify(
+        error?.response?.data?.error?.message || 'Failed to update project',
+        { type: 'error' }
+      );
+    },
+  });
+
   const deleteMutation = useMutation({
     mutationFn: projectService.deleteProject,
     onSuccess: () => {
