@@ -34,6 +34,7 @@ export interface PersonalAccessToken {
   scopes: string[];
   llmProvider?: 'openai' | 'anthropic' | 'gemini';
   projectId?: string;
+  snippets?: Record<string, string>;
   lastUsedAt?: string | null;
   expiresAt?: string | null;
   isRevoked: boolean;

@@ -56,4 +56,8 @@ export const userService = {
       email
     });
   },
+
+  async getProviderSnippet(provider: 'openai' | 'anthropic' | 'gemini') {
+    return apiClient.get(`/_api/provider-snippets/${provider}`);
+  }
 };
