@@ -326,7 +326,7 @@ export const TokenCard = ({ token, onDelete, onCopy }: TokenCardProps) => {
           </Box>
         </Box>
 
-        {isExpiringSoon && !isRevoked && (
+        {isExpiringSoon && !isRevoked && canManageToken && (
           <Box mt={2}>
             <Button
               size="small"

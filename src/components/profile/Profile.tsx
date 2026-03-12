@@ -34,6 +34,12 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useNotification } from '@/hooks/useNotification';
 import { formatDistanceToNow } from 'date-fns';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
+import { ChangePasswordDialog } from './ChangePasswordDialog';
+import { useQuery } from '@tanstack/react-query';
+import { projectService } from '@/services/projectService';
+import { userService } from '@/services/userService';
+import { ApiKey, Project } from '@/types/api';
+import { PersonalAccessToken } from '@/types/user';
 
 const schema = yup.object({
   name: yup
@@ -47,13 +53,24 @@ interface FormData {
   name: string;
 }
 
+interface changePasswordData {
+  currentPassword: string;
+  newPassword: string;
+}
+
+const firebaseErrorMessages: Record<string, string> = {
+  "auth/invalid-credential": "Incorrect password. Please try again.",
+};
+
 export const Profile = () => {
-  const { user, updateUserProfile, logout } = useAuth();
+  const { user, updateUserProfile, logout, changePassword, deleteUserAccount } = useAuth();
   const { notify } = useNotification();
   const [isEditing, setIsEditing] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [usageAlerts, setUsageAlerts] = useState(true);
+  const [showChangePasswordDialog, setShowChangePasswordDialog] = useState(false);
+  const [deletePassword, setDeletePassword] = useState('');
 
   const {
     register,
@@ -88,6 +105,67 @@ export const Profile = () => {
     }
   };
 
+  const handleChangePassword = async (data: changePasswordData) => {
+    try {
+      await changePassword(data.currentPassword, data.newPassword);
+      notify('Password changed successfully!', { type: 'success' });
+      setShowChangePasswordDialog(false);
+    } catch (error: any) {
+      notify(firebaseErrorMessages[error.code] || 'Failed to change password', { type: 'error' });
+    }
+  }
+
+  const handleDeleteAccount = async (password: string) => {
+    try {
+      await deleteUserAccount(password);
+      notify('Account deleted successfully', { type: 'success' });
+    } catch (error: any) {
+      notify(firebaseErrorMessages[error.code] || 'Failed to delete account', { type: 'error' });
+    }
+  }
+
+  const {
+    data: Project = [],
+    isLoading: projectLoading,
+  } = useQuery<Project[]>({
+    queryKey: ['projects'],
+    queryFn: projectService.getProjects,
+    staleTime: 5 * 60 * 1000,
+  })
+
+  const {
+    data: tokens = [],
+    isLoading: tokensLoading,
+  } = useQuery<PersonalAccessToken[]>({
+    queryKey: ['userTokens'],
+    queryFn: userService.getTokens,
+    staleTime: 2 * 60 * 1000,
+  });
+
+  const {
+    data: apiKeys = [],
+    isLoading: keysLoading,
+  } = useQuery<ApiKey[]>({
+    queryKey: ['projectApiKeys'],
+    queryFn: async () => {
+      if (!Project.length) return [];
+      const keysByProject = await Promise.all(
+        Project.map(async (project) => {
+          const keys = await projectService.getProjectKeys(project.id);
+          return keys.map((key) => ({
+            ...key,
+            projectId: project.id,
+          }));
+        })
+      );
+      return keysByProject.flat();
+    },
+    enabled: Project.length > 0,
+    staleTime: 2 * 60 * 1000,
+  });
+
+  const activeTokens = tokens.filter(token => !token.isRevoked);
+  const activeKeys = apiKeys.filter(key => key.isActive);
   const handleLogout = async () => {
     try {
       await logout();
@@ -97,6 +175,12 @@ export const Profile = () => {
     }
   };
 
+  const handleCloseDeleteDialog = () => {
+    setShowDeleteDialog(false);
+    setDeletePassword('');
+  };
+
+  const showToggleAction = false;
   const getTierColor = (tier: string) => {
     switch (tier) {
       case 'enterprise':
@@ -254,7 +338,7 @@ export const Profile = () => {
 
         {/* Account Settings */}
         <Grid item xs={12} md={4}>
-          <Paper sx={{ p: 3, mb: 3 }}>
+          {showToggleAction && <Paper sx={{ p: 3, mb: 3 }}>
             <Typography variant="h6" gutterBottom>
               Preferences
             </Typography>
@@ -282,18 +366,18 @@ export const Profile = () => {
                 />
               </ListItem>
             </List>
-          </Paper>
+          </Paper>}
 
-          <Paper sx={{ p: 3 }}>
+          <Paper sx={{ p: 3, height: '100%', pt: 16 }}>
             <Typography variant="h6" gutterBottom>
               Account Actions
             </Typography>
-            <Box display="flex" flexDirection="column" gap={2}>
+            <Box display="flex" flexDirection="column" gap={2} width="100%">
               <Button
                 variant="outlined"
                 startIcon={<SecurityIcon />}
                 fullWidth
-                onClick={() => notify('Password reset functionality coming soon', { type: 'info' })}
+                onClick={() => setShowChangePasswordDialog(true)}
               >
                 Change Password
               </Button>
@@ -328,7 +412,7 @@ export const Profile = () => {
               <Grid item xs={12} sm={4}>
                 <Box textAlign="center">
                   <Typography variant="h4" color="primary">
-                    3
+                    {projectLoading ? '...' : Project.length}
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
                     Active Projects
@@ -338,7 +422,7 @@ export const Profile = () => {
               <Grid item xs={12} sm={4}>
                 <Box textAlign="center">
                   <Typography variant="h4" color="secondary">
-                    8
+                    {keysLoading ? '...' : activeKeys.length}
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
                     API Keys
@@ -348,7 +432,7 @@ export const Profile = () => {
               <Grid item xs={12} sm={4}>
                 <Box textAlign="center">
                   <Typography variant="h4" color="success.main">
-                    2
+                    {tokensLoading ? '...' : activeTokens.length}
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
                     Access Tokens
@@ -363,7 +447,7 @@ export const Profile = () => {
       {/* Delete Account Dialog */}
       <Dialog
         open={showDeleteDialog}
-        onClose={() => setShowDeleteDialog(false)}
+        onClose={handleCloseDeleteDialog}
         maxWidth="sm"
         fullWidth
       >
@@ -382,11 +466,14 @@ export const Profile = () => {
             <li>Team memberships</li>
           </Box>
           <Typography sx={{ mt: 2 }}>
-            If you're sure, please type <strong>DELETE</strong> to confirm:
+            If you're sure, please type <strong>PASSWORD</strong> to confirm:
           </Typography>
           <TextField
+            label="Enter your password to confirm"
+            type="password"
             fullWidth
-            placeholder="Type DELETE to confirm"
+            value={deletePassword}
+            onChange={(e) => setDeletePassword(e.target.value)}
             sx={{ mt: 2 }}
           />
         </DialogContent>
@@ -397,15 +484,20 @@ export const Profile = () => {
           <Button
             color="error"
             variant="contained"
-            onClick={() => {
-              notify('Account deletion is not available in demo mode', { type: 'info' });
-              setShowDeleteDialog(false);
-            }}
+            onClick={() => handleDeleteAccount(deletePassword)}
+            disabled={!deletePassword}
           >
             Delete Account
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Change Password Dialog */}
+      <ChangePasswordDialog
+        open={showChangePasswordDialog}
+        onClose={() => setShowChangePasswordDialog(false)}
+        onSubmit={handleChangePassword}
+      />
     </Box>
   );
 };

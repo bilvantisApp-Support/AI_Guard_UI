@@ -6,7 +6,6 @@ import {
     Button,
     Typography,
     Box,
-    Alert
 } from "@mui/material";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNotification } from "@/hooks/useNotification";
@@ -20,7 +19,7 @@ interface FormData {
 export const ForgotPassword = () => {
     const { brevoResetPassword } = useAuth();
     const { notify } = useNotification();
-    const [success, setSuccess] = useState(false);
+    const [, setSuccess] = useState(false);
     const {
         register,
         handleSubmit,
@@ -33,7 +32,7 @@ export const ForgotPassword = () => {
             setSuccess(true);
             notify("Password reset email sent", { type: "success" });
         } catch (error: any) {
-            notify(error.message, { type: "error" });
+            notify(error?.response?.data?.error?.message, { type: "error" });
         }
     };
 
@@ -48,12 +47,6 @@ export const ForgotPassword = () => {
                     <Typography variant="body2" align="center" mb={2}>
                         Enter your email to receive reset link
                     </Typography>
-
-                    {success && (
-                        <Alert severity="success">
-                            Reset email sent. Check your inbox.
-                        </Alert>
-                    )}
 
                     <Box component="form" onSubmit={handleSubmit(onSubmit)}>
                         <TextField

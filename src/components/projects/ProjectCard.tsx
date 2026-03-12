@@ -74,6 +74,7 @@ export const ProjectCard = ({ project, onEdit, onDelete }: ProjectCardProps) => 
   const userRole = project.role || 'member';
   const canEdit = userRole === 'owner' || userRole === 'admin';
   const canDelete = userRole === 'owner';
+  const showEditAction = false;
 
   return (
     <Card
@@ -141,9 +142,9 @@ export const ProjectCard = ({ project, onEdit, onDelete }: ProjectCardProps) => 
 
         <Box display="flex" alignItems="center" justifyContent="space-between">
           <AvatarGroup max={4} sx={{ '& .MuiAvatar-root': { width: 24, height: 24, fontSize: '0.75rem' } }}>
-            {project.members ? project.members.slice(0, 4).map((member, index) => (
+            {project.members ? project.members.slice(0, 4).map((member) => (
               <Avatar key={member.memberUserId} sx={{ bgcolor: 'primary.main' }}>
-                {String.fromCharCode(65 + index)}
+                {member.name ? member.name.charAt(0).toUpperCase() : '?'}
               </Avatar>
             )) : (
               // Show placeholder avatars based on memberCount when members array is not available
@@ -171,21 +172,21 @@ export const ProjectCard = ({ project, onEdit, onDelete }: ProjectCardProps) => 
         <Button size="small" onClick={(e) => { e.stopPropagation(); navigate(`/projects/${project.id}`); }}>
           View Details
         </Button>
-        <Button 
-          size="small" 
+        <Button
+          size="small"
           onClick={(e) => { e.stopPropagation(); navigate(`/projects/${project.id}/analytics`); }}
         >
           Analytics
         </Button>
       </CardActions>
 
-      <Menu
+      {canEdit && < Menu
         anchorEl={anchorEl}
         open={Boolean(anchorEl)}
         onClose={handleMenuClose}
         onClick={(e) => e.stopPropagation()}
       >
-        {canEdit && (
+        {canEdit && showEditAction && (
           <MenuItem onClick={handleEdit}>
             Edit Project
           </MenuItem>
@@ -195,7 +196,7 @@ export const ProjectCard = ({ project, onEdit, onDelete }: ProjectCardProps) => 
             Delete Project
           </MenuItem>
         )}
-      </Menu>
-    </Card>
+      </Menu>}
+    </Card >
   );
 };

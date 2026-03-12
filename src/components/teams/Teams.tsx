@@ -66,7 +66,7 @@ export const Teams = () => {
       notify('Team created successfully!', { type: 'success' });
     },
     onError: (error: any) => {
-      notify(error.message || 'Failed to create team', { type: 'error' });
+      notify( error?.response?.data?.error?.message || 'Failed to create team', { type: 'error' });
     },
   });
 

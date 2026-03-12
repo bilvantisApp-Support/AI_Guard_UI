@@ -7,6 +7,9 @@ import {
   onAuthStateChanged,
   sendPasswordResetEmail,
   updateProfile,
+  EmailAuthProvider,
+  reauthenticateWithCredential,
+  updatePassword,
 } from 'firebase/auth';
 import { auth } from '@/config/firebase';
 import { User, AuthState } from '@/types/user';
@@ -21,6 +24,8 @@ interface AuthContextType extends AuthState {
   brevoResetPassword: (email: string) => Promise<void>;
   updateUserProfile: (name: string) => Promise<void>;
   getIdToken: () => Promise<string | null>;
+  changePassword: (currentPassword: string, newPassword: string) => Promise<void>;
+  deleteUserAccount: (password: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -119,11 +124,6 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   const signup = async (email: string, password: string, name: string, captchaToken: string) => {
     try {
-
-      if (!email.toLowerCase().endsWith('@bilvantis.io')) {
-        throw new Error('Only Bilvantis email addresses are allowed');
-      }
-
       if (!captchaToken) {
         throw new Error("Captcha required");
       }
@@ -165,6 +165,28 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       throw error;
     }
   };
+
+  //Change password service of firebase
+  const changePassword = async (currentPassword: string, newPassword: string) => {
+    try {
+      const user = auth.currentUser;
+      if (!user || !user.email) {
+        throw new Error("No authenticated user");
+      }
+
+      const credetials = EmailAuthProvider.credential(user.email, currentPassword);
+      await reauthenticateWithCredential(user, credetials);
+      await updatePassword(user, newPassword);
+
+    } catch (error: any) {
+      setState((prev) => ({
+        ...prev,
+        error: error.message || 'Failed to Change Password',
+      }));
+      throw error;
+    }
+  }
+
   //Existing resetpassword sevice of firebase
   const resetPassword = async (email: string) => {
     try {
@@ -213,7 +235,11 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
       setState((prev) => ({
         ...prev,
-        user: response.data,
+        user: {
+          ...prev.user!,
+          ...response.data,
+        },
+
       }));
     } catch (error: any) {
       setState((prev) => ({
@@ -223,6 +249,37 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       throw error;
     }
   };
+
+  //Delete user account
+  const deleteUserAccount = async (password: string) => {
+    try {
+      const user = auth.currentUser;
+      if (!user || !user.email) {
+        throw new Error("No authenticated user");
+      }
+
+      const credetials = EmailAuthProvider.credential(user.email, password);
+      await reauthenticateWithCredential(user, credetials);
+
+      const token = await user.getIdToken();
+      await axios.delete(
+        `${import.meta.env.VITE_API_BASE_URL}/_api/users/account`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      await signOut(auth);
+    } catch (error: any) {
+      setState((prev) => ({
+        ...prev,
+        error: error.message || 'Failed to delete user account',
+      }));
+      throw error;
+    }
+  }
 
   const getIdToken = async (): Promise<string | null> => {
     const currentUser = auth.currentUser;
@@ -239,6 +296,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     brevoResetPassword,
     updateUserProfile,
     getIdToken,
+    changePassword,
+    deleteUserAccount
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

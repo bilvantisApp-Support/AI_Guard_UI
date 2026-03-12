@@ -74,6 +74,7 @@ export const TeamCard = ({ team, onEdit, onDelete }: TeamCardProps) => {
   const userRole = team.role || 'member';
   const canEdit = userRole === 'owner' || userRole === 'admin';
   const canDelete = userRole === 'owner';
+  const showEditAction = false;
 
   return (
     <Card
@@ -172,13 +173,13 @@ export const TeamCard = ({ team, onEdit, onDelete }: TeamCardProps) => {
         </Button>
       </CardActions>
 
-      <Menu
+      {canEdit && <Menu
         anchorEl={anchorEl}
         open={Boolean(anchorEl)}
         onClose={handleMenuClose}
         onClick={(e) => e.stopPropagation()}
       >
-        {canEdit && (
+        {canEdit && showEditAction && (
           <MenuItem onClick={handleEdit}>
             Edit Team
           </MenuItem>
@@ -188,7 +189,7 @@ export const TeamCard = ({ team, onEdit, onDelete }: TeamCardProps) => {
             Delete Team
           </MenuItem>
         )}
-      </Menu>
+      </Menu>}
     </Card>
   );
 };

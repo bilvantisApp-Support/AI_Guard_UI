@@ -10,7 +10,6 @@ import {
   Button,
   Typography,
   Box,
-  Alert,
   InputAdornment,
   IconButton,
   Divider,
@@ -25,7 +24,7 @@ import { useNotification } from '@/hooks/useNotification';
 
 const schema = yup.object({
   email: yup.string().email('Invalid email').required('Email is required'),
-  password: yup.string().min(6, 'Password must be at least 6 characters').required('Password is required'),
+  password: yup.string().min(8, 'Password must be at least 8 characters').required('Password is required'),
 });
 
 interface LoginFormData {
@@ -33,9 +32,14 @@ interface LoginFormData {
   password: string;
 }
 
+const firebaseErrorMessages: Record<string, string> = {
+  "auth/invalid-credential": "Invalid email or password.",
+  "auth/user-disabled": "This account has been disabled.",
+};
+
 export const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
-  const { login, error } = useAuth();
+  const { login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const { notify } = useNotification();
@@ -55,7 +59,7 @@ export const Login = () => {
       notify('Login successful!', { type: 'success' });
       navigate(from, { replace: true });
     } catch (err: any) {
-      notify(err.message || 'Login failed', { type: 'error' });
+      notify(firebaseErrorMessages[err.code] || 'Login failed', { type: 'error' });
     }
   };
 
@@ -100,11 +104,6 @@ export const Login = () => {
             Secure, monitored access to AI APIs
           </Typography>
 
-          {error && (
-            <Alert severity="error" sx={{ width: '100%', mb: 2 }}>
-              {error}
-            </Alert>
-          )}
 
           <Box component="form" onSubmit={handleSubmit(onSubmit)} sx={{ mt: 1, width: '100%' }}>
             <TextField

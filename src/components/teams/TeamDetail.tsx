@@ -14,11 +14,14 @@ import {
   IconButton,
   Menu,
   MenuItem,
-  Divider,
   Alert,
   Skeleton,
   Tab,
   Tabs,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from '@mui/material';
 import Grid from '@mui/material/Grid';
 import {
@@ -26,6 +29,7 @@ import {
   MoreVert as MoreIcon,
   People as PeopleIcon,
   Folder as ProjectIcon,
+  Settings as SettingsIcon,
   Analytics as AnalyticsIcon,
   Add as AddIcon,
   TrendingUp as TrendingUpIcon,
@@ -86,7 +90,9 @@ export const TeamDetail = () => {
   const [teamMenuAnchor, setTeamMenuAnchor] = useState<null | HTMLElement>(null);
   const [selectedProjectMenuAnchor, setSelectedProjectMenuAnchor] = useState<null | HTMLElement>(null);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
-
+  const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; team?: Team }>({
+    open: false,
+  });
   const {
     data: team,
     isLoading: teamLoading,
@@ -121,6 +127,7 @@ export const TeamDetail = () => {
   const isOwner = currentUserRole === 'owner';
   const isAdmin = currentUserRole === 'admin';
   const isOwnerOrAdmin = isOwner || isAdmin;
+  const showTeamSettings = false;
 
   const handleMemberMenuOpen = (
     event: React.MouseEvent<HTMLElement>,
@@ -196,6 +203,7 @@ export const TeamDetail = () => {
       teamService.assignTeamProject(id!, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['team', id] });
+      queryClient.invalidateQueries({ queryKey: ['teams'] });
       queryClient.invalidateQueries({ queryKey: ['projects'] });
       notify('Project assigned to team', { type: 'success' });
       setOpenAssignProject(false);
@@ -210,6 +218,7 @@ export const TeamDetail = () => {
       teamService.removeTeamProject(id!, projectId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['team', id] });
+      queryClient.invalidateQueries({ queryKey: ['teams'] });
       queryClient.invalidateQueries({ queryKey: ['projects'] });
       notify('Project removed from team', { type: 'success' });
       handleProjectMenuClose();
@@ -218,6 +227,28 @@ export const TeamDetail = () => {
       notify('Failed to remove project', { type: 'error' });
     },
   });
+
+  //Delete Team Mutation 
+  const deleteTeamMutation = useMutation({
+    mutationFn: teamService.deleteTeam,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['teams'] });
+      notify('Team deleted successfully!', { type: 'success' });
+      navigate('/teams');
+    },
+    onError: (error: any) => {
+      notify(
+        error?.response?.data?.error?.message || 'Failed to delete team',
+        { type: 'error' }
+      );
+    },
+  });
+
+  const handleDeleteTeam = async () => {
+    if (!deleteDialog.team) return;
+    await deleteTeamMutation.mutateAsync(deleteDialog.team.id);
+    setDeleteDialog({ open: false });
+  };
 
   const getRoleColor = (role: string) => {
     switch (role) {
@@ -643,13 +674,19 @@ export const TeamDetail = () => {
         open={Boolean(teamMenuAnchor)}
         onClose={() => setTeamMenuAnchor(null)}
       >
-        <MenuItem onClick={() => setTeamMenuAnchor(null)}>
+        {showTeamSettings && <MenuItem onClick={() => setTeamMenuAnchor(null)}>
+          <SettingsIcon sx={{ mr: 1 }} />
           Team Settings
-        </MenuItem>
-        <Divider />
-        <MenuItem onClick={() => setTeamMenuAnchor(null)} sx={{ color: 'error.main' }}>
-          Delete Team
-        </MenuItem>
+        </MenuItem>}
+        {isOwner && (
+          <MenuItem sx={{ color: 'error.main' }}
+            onClick={() => {
+              setDeleteDialog({ open: true, team: displayTeam });
+              setTeamMenuAnchor(null);
+            }}>
+            Delete Team
+          </MenuItem>
+        )}
       </Menu>
 
       {isOwnerOrAdmin && (
@@ -741,6 +778,31 @@ export const TeamDetail = () => {
         projects={projects}
         assignedProjects={assignedProjects}
       />
+
+
+      <Dialog
+        open={deleteDialog.open}
+        onClose={() => setDeleteDialog({ open: false })}
+      >
+        <DialogTitle>Delete Team</DialogTitle>
+        <DialogContent>
+          <Typography>
+            Are you sure you want to delete "{deleteDialog.team?.name}"?
+            This action cannot be undone and will remove all associated API keys and data.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteDialog({ open: false })}>Cancel</Button>
+          <Button
+            onClick={handleDeleteTeam}
+            color="error"
+            variant="contained"
+            disabled={deleteTeamMutation.isPending}
+          >
+            {deleteTeamMutation.isPending ? 'Deleting...' : 'Delete'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };
