@@ -396,13 +396,13 @@ export const ProjectDetail = () => {
           </Box>
         </Box>
         <Box display="flex" alignItems="center" gap={1}>
-          <Button
+          {isOwnerOrAdmin && <Button
             variant="outlined"
             startIcon={<AnalyticsIcon />}
             onClick={() => navigate(`/projects/${id}/analytics`)}
           >
             Analytics
-          </Button>
+          </Button>}
           <IconButton onClick={handleMenuClick}>
             <MoreIcon />
           </IconButton>
@@ -802,7 +802,7 @@ export const ProjectDetail = () => {
 
       </Paper>
 
-      <Menu
+      {isOwner && <Menu
         anchorEl={anchorEl}
         open={Boolean(anchorEl)}
         onClose={handleMenuClose}
@@ -811,17 +811,17 @@ export const ProjectDetail = () => {
           <SettingsIcon sx={{ mr: 1 }} />
           Project Settings
         </MenuItem>}
-        {isOwner && (
-          <MenuItem sx={{ color: 'error.main' }}
-            onClick={() => {
-              setDeleteDialog({ open: true, project: displayProject });
-              handleMenuClose();
-            }}
-          >
-            Delete Project
-          </MenuItem>
-        )}
-      </Menu>
+
+        <MenuItem sx={{ color: 'error.main' }}
+          onClick={() => {
+            setDeleteDialog({ open: true, project: displayProject });
+            handleMenuClose();
+          }}
+        >
+          Delete Project
+        </MenuItem>
+
+      </Menu>}
 
       {/* Remove API key menu */}
       {isOwnerOrAdmin && (

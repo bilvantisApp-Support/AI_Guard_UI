@@ -317,13 +317,6 @@ export const TeamDetail = () => {
           </Box>
         </Box>
         <Box display="flex" alignItems="center" gap={1}>
-          <Button
-            variant="outlined"
-            startIcon={<AnalyticsIcon />}
-            onClick={() => setTabValue(2)}
-          >
-            Analytics
-          </Button>
           <IconButton onClick={(e) => setTeamMenuAnchor(e.currentTarget)}>
             <MoreIcon />
           </IconButton>
@@ -669,7 +662,7 @@ export const TeamDetail = () => {
         </TabPanel>
       </Paper>
 
-      <Menu
+      {isOwner && <Menu
         anchorEl={teamMenuAnchor}
         open={Boolean(teamMenuAnchor)}
         onClose={() => setTeamMenuAnchor(null)}
@@ -678,16 +671,16 @@ export const TeamDetail = () => {
           <SettingsIcon sx={{ mr: 1 }} />
           Team Settings
         </MenuItem>}
-        {isOwner && (
-          <MenuItem sx={{ color: 'error.main' }}
-            onClick={() => {
-              setDeleteDialog({ open: true, team: displayTeam });
-              setTeamMenuAnchor(null);
-            }}>
-            Delete Team
-          </MenuItem>
-        )}
-      </Menu>
+
+        <MenuItem sx={{ color: 'error.main' }}
+          onClick={() => {
+            setDeleteDialog({ open: true, team: displayTeam });
+            setTeamMenuAnchor(null);
+          }}>
+          Delete Team
+        </MenuItem>
+
+      </Menu>}
 
       {isOwnerOrAdmin && (
         <Menu
