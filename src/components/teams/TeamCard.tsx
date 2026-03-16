@@ -76,8 +76,6 @@ export const TeamCard = ({ team, onEdit, onDelete }: TeamCardProps) => {
   const canDelete = userRole === 'owner';
   const showEditAction = false;
 
-  console.log("Teamcard render: ", team);
-
   return (
     <Card
       sx={{

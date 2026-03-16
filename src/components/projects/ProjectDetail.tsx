@@ -199,8 +199,8 @@ export const ProjectDetail = () => {
       queryClient.invalidateQueries({ queryKey: ['project-keys', id] });
       notify('API key deleted successfully', { type: 'success' });
     },
-    onError: () => {
-      notify('Failed to delete API key', { type: 'error' });
+    onError: (error: any) => {
+      notify(error?.response?.data?.error?.message || 'Failed to delete API key', { type: 'error' });
     },
   });
 
@@ -250,8 +250,8 @@ export const ProjectDetail = () => {
       handleMemberMenuClose();
     },
 
-    onError: () => {
-      notify('Failed to remove member', { type: 'error' });
+    onError: (error: any) => {
+      notify(error?.response?.data?.error?.message || 'Failed to remove member', { type: 'error' });
     },
   });
 
@@ -269,8 +269,8 @@ export const ProjectDetail = () => {
       handleMemberMenuClose();
     },
 
-    onError: () => {
-      notify('Failed to Update member', { type: 'error' });
+    onError: (error: any) => {
+      notify(error?.response?.data?.error?.message || 'Failed to Update member', { type: 'error' });
     },
   });
 
