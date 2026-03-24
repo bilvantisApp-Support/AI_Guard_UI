@@ -66,7 +66,7 @@ export const ProjectList = () => {
       notify('Project created successfully!', { type: 'success' });
     },
     onError: (error: any) => {
-      notify(error.message || 'Failed to create project', { type: 'error' });
+      notify( error?.response?.data?.error?.message || 'Failed to create project', { type: 'error' });
     },
   });
 
@@ -95,7 +95,7 @@ export const ProjectList = () => {
       notify('Project deleted successfully!', { type: 'success' });
     },
     onError: (error: any) => {
-      notify(error.message || 'Failed to delete project', { type: 'error' });
+      notify(error?.response?.data?.error?.message|| 'Failed to delete project', { type: 'error' });
     },
   });
 

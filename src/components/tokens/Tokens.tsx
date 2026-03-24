@@ -26,8 +26,6 @@ import { CreateTokenDialog } from './CreateTokenDialog';
 import { userService } from '@/services/userService';
 import { useNotification } from '@/hooks/useNotification';
 import type { PersonalAccessToken, CreateTokenRequest, APIUser } from '@/types/user';
-import { PROVIDER_CONFIG } from '@/config/providerConfig';
-
 
 export const Tokens = () => {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
@@ -35,7 +33,7 @@ export const Tokens = () => {
     open: boolean;
     token?: PersonalAccessToken;
   }>({ open: false });
-  const [codeTab, setCodeTab] = useState<'curl' | 'node' | 'python' | 'Java'>('curl');
+  const [codeTab, setCodeTab] = useState<string>('curl');
 
   const { notify } = useNotification();
   const queryClient = useQueryClient();
@@ -74,11 +72,17 @@ export const Tokens = () => {
     },
   });
 
+  const providerSnippet = newTokenDialog.token?.snippets ?? {};
+  const snippets = Object.fromEntries(
+    Object.entries(providerSnippet).filter(([_, value]) => value !== "")
+  ) as Record<string, string>;
+
   const { data: User } = useQuery<APIUser>({
     queryKey: ['profile'],
     queryFn: userService.getProfile,
     staleTime: 5 * 60 * 1000
   });
+
   const userRole = User?.role;
   const canCreateToken = userRole === 'owner' || userRole === 'admin';
 
@@ -119,91 +123,6 @@ export const Tokens = () => {
     if (newTokenDialog.token?.token) {
       handleCopyToken(newTokenDialog.token.token);
     }
-  };
-
-  const getProvider = (): 'openai' | 'anthropic' | 'gemini' =>
-    (newTokenDialog.token?.llmProvider as any) || 'openai';
-
-  const generateCurlURL = (token: string) => {
-    const provider = getProvider();
-    const config = PROVIDER_CONFIG[provider];
-
-    return `curl -X POST ${config.endpoint} \\
-  -H "Content-Type: application/json" \\
-  -H "Authorization: Bearer ${token}" \\
-  -H "x-ai-guard-provider: ${provider}" \\
-  -d '${config.curlBody}'`;
-  };
-
-  const generateNodeCode = (token: string) => {
-    const provider = getProvider();
-    const config = PROVIDER_CONFIG[provider];
-
-    return `
-      // Install required SDK
-      //${config.nodeInstall}
-      ${config.nodeImport}
-
-      const client = ${config.nodeClient}({
-        apiKey: "${token}",
-        baseURL: "${config.basePoint}",
-        defaultHeaders: {
-          "x-ai-guard-provider": "${provider}"
-        }
-      });
-
-      async function main() {
-        const response = await ${config.nodeCall};
-
-        console.log(response);
-      }
-
-      main().catch(console.error);`;
-  };
-
-
-  const generatePythonCode = (token: string) => {
-    const provider = getProvider();
-    const config = PROVIDER_CONFIG[provider];
-
-    return `# Install required SDK
-# ${config.pythonInstall}
-${config.pythonImport}
-
-client = ${config.pythonClient}(
-    api_key="${token}",
-    base_url="${config.basePoint}",
-    default_headers={
-        "x-ai-guard-provider": "${provider}"
-    }
-)
-
-response = ${config.pythonCall}
-
-print(response.output_text)`;
-  };
-
-  const generateJavaCode = (token: string) => {
-    const provider = getProvider();
-    const config = PROVIDER_CONFIG[provider];
-
-    return `
-    // Install dependency:
-    // ${config.javaInstall}
-      ${config.javaImport}
-
-    public class Main {
-
-        public static void main(String[] args) {
-
-            String token = "${token}";
-            String BASE_URL = "${config.basePoint}";
-
-            ${config.javaClient}
-
-            ${config.javaCall}
-        }
-    }`;
   };
 
   return (
@@ -325,10 +244,9 @@ print(response.output_text)`;
             onChange={(_, v) => setCodeTab(v)}
             sx={{ mb: 2 }}
           >
-            <Tab label="cURL" value="curl" />
-            <Tab label="Node.js" value="node" />
-            <Tab label="Python" value="python" />
-            <Tab label="Java" value="Java" />
+            {Object.keys(snippets).map((lang) => (
+              <Tab key={lang} label={lang} value={lang} />
+            ))}
           </Tabs>
 
           <Box sx={{ position: 'relative' }}>
@@ -336,14 +254,7 @@ print(response.output_text)`;
             <IconButton
               size="small"
               onClick={() => {
-                const token = newTokenDialog.token?.token || '';
-                let code = '';
-
-                if (codeTab === 'curl') code = generateCurlURL(token);
-                if (codeTab === 'node') code = generateNodeCode(token);
-                if (codeTab === 'python') code = generatePythonCode(token);
-                if (codeTab === 'Java') code = generateJavaCode(token);
-
+                const code = snippets[codeTab]?.replaceAll("YOUR_PAT_TOKEN", newTokenDialog.token?.token || '') || '';
                 navigator.clipboard.writeText(code);
                 notify('Copied to clipboard!', { type: 'success' });
               }}
@@ -372,17 +283,7 @@ print(response.output_text)`;
                 overflow: 'auto',
               }}
             >
-              {codeTab === 'curl' &&
-                generateCurlURL(newTokenDialog.token?.token || '')}
-
-              {codeTab === 'node' &&
-                generateNodeCode(newTokenDialog.token?.token || '')}
-
-              {codeTab === 'python' &&
-                generatePythonCode(newTokenDialog.token?.token || '')}
-
-              {codeTab === 'Java' &&
-                generateJavaCode(newTokenDialog.token?.token || '')}
+              {snippets[codeTab] ? snippets[codeTab].replaceAll("YOUR_PAT_TOKEN", newTokenDialog.token?.token || '') : ''}
             </Box>
           </Box>
 

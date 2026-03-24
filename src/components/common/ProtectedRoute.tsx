@@ -13,7 +13,7 @@ export const ProtectedRoute = ({ children, roles }: ProtectedRouteProps) => {
   const { user, loading } = useAuth();
   const location = useLocation();
 
-  const { data: profile } = useQuery({
+  const { data: profile, isLoading: profileLoading } = useQuery({
     queryKey: ['profile'],
     queryFn: userService.getProfile,
     enabled: !!user
@@ -21,7 +21,7 @@ export const ProtectedRoute = ({ children, roles }: ProtectedRouteProps) => {
 
   const userRole = profile?.role;
 
-  if (loading) {
+  if (loading || profileLoading) {
     return (
       <Box
         display="flex"
@@ -38,7 +38,7 @@ export const ProtectedRoute = ({ children, roles }: ProtectedRouteProps) => {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  if (roles && !roles.includes(userRole!)) {
+  if (roles && userRole && !roles.includes(userRole!)) {
     return <Navigate to="/unauthorized" replace />;
   }
 

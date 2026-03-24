@@ -93,11 +93,12 @@ export const CreateProjectDialog = ({
           <TextField
             label="Description"
             fullWidth
+            required
             multiline
             rows={3}
             {...register('description')}
             error={!!errors.description}
-            helperText={errors.description?.message || 'Optional: Describe what this project is for'}
+            helperText={errors.description?.message }
             placeholder="e.g., A customer service chatbot using GPT-4..."
           />
         </Box>

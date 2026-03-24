@@ -14,11 +14,14 @@ import {
   IconButton,
   Menu,
   MenuItem,
-  Divider,
   Alert,
   Skeleton,
   Tab,
   Tabs,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from '@mui/material';
 import Grid from '@mui/material/Grid';
 import {
@@ -86,7 +89,9 @@ export const ProjectDetail = () => {
   const [openInviteMember, setOpenInviteMember] = useState(false);
   const [openEditMember, setOpenEditMember] = useState(false);
   const [editingMember, setEditingMember] = useState<any>(null);
-
+  const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; project?: Project }>({
+    open: false,
+  });
 
   const {
     data: project,
@@ -116,7 +121,7 @@ export const ProjectDetail = () => {
   });
 
   const displayProject = project;
-  const displayApiKeys = apiKeys
+  const displayApiKeys = apiKeys;
 
   const currentMember = displayProject?.members?.find((m) => m.email == user?.email);
   const currentUserRole = currentMember?.role;
@@ -171,7 +176,7 @@ export const ProjectDetail = () => {
     },
     onError: (error: any) => {
       notify(
-        error?.response?.data?.error?.message || 'Failed to add API key',
+        error?.response?.data?.error?.message || error?.response?.data?.error?.details?.error?.message || 'Failed to add API key',
         { type: 'error' }
       );
     },
@@ -194,8 +199,8 @@ export const ProjectDetail = () => {
       queryClient.invalidateQueries({ queryKey: ['project-keys', id] });
       notify('API key deleted successfully', { type: 'success' });
     },
-    onError: () => {
-      notify('Failed to delete API key', { type: 'error' });
+    onError: (error: any) => {
+      notify(error?.response?.data?.error?.message || 'Failed to delete API key', { type: 'error' });
     },
   });
 
@@ -245,8 +250,8 @@ export const ProjectDetail = () => {
       handleMemberMenuClose();
     },
 
-    onError: () => {
-      notify('Failed to remove member', { type: 'error' });
+    onError: (error: any) => {
+      notify(error?.response?.data?.error?.message || 'Failed to remove member', { type: 'error' });
     },
   });
 
@@ -264,8 +269,8 @@ export const ProjectDetail = () => {
       handleMemberMenuClose();
     },
 
-    onError: () => {
-      notify('Failed to Update member', { type: 'error' });
+    onError: (error: any) => {
+      notify(error?.response?.data?.error?.message || 'Failed to Update member', { type: 'error' });
     },
   });
 
@@ -273,6 +278,29 @@ export const ProjectDetail = () => {
     await updateMemberMutation.mutateAsync({ memberId, role });
   }
 
+  //Delete Project Mutation 
+  const deleteProjectMutation = useMutation({
+    mutationFn: projectService.deleteProject,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
+      notify('Project deleted successfully!', { type: 'success' });
+      navigate('/projects');
+    },
+    onError: (error: any) => {
+      notify(
+        error?.response?.data?.error?.message || 'Failed to delete project',
+        { type: 'error' }
+      );
+    },
+  });
+
+  const handleDeleteProject = async () => {
+    if (!deleteDialog.project) return;
+    await deleteProjectMutation.mutateAsync(deleteDialog.project.id);
+    setDeleteDialog({ open: false });
+  };
+
+  const showProjectSettings = false;
 
   const getProviderInfo = (provider: string) => {
     switch (provider) {
@@ -368,13 +396,13 @@ export const ProjectDetail = () => {
           </Box>
         </Box>
         <Box display="flex" alignItems="center" gap={1}>
-          <Button
+          {isOwnerOrAdmin && <Button
             variant="outlined"
             startIcon={<AnalyticsIcon />}
             onClick={() => navigate(`/projects/${id}/analytics`)}
           >
             Analytics
-          </Button>
+          </Button>}
           <IconButton onClick={handleMenuClick}>
             <MoreIcon />
           </IconButton>
@@ -453,7 +481,7 @@ export const ProjectDetail = () => {
         <TabPanel value={tabValue} index={0}>
           <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
             <Typography variant="h6">API Keys</Typography>
-            {isOwnerOrAdmin &&<Button variant="contained" startIcon={<AddIcon />} onClick={() => {
+            {isOwnerOrAdmin && <Button variant="contained" startIcon={<AddIcon />} onClick={() => {
               setOpenAddKey(true);
             }}>
               Add API Key
@@ -490,7 +518,7 @@ export const ProjectDetail = () => {
                           color={key.isActive === true ? 'success' : 'default'}
                           variant="outlined"
                         />
-                       {isOwnerOrAdmin && <IconButton
+                        {isOwnerOrAdmin && <IconButton
                           size="small"
                           onClick={(e) => handleKeyMenuOpen(e, key.keyId)}
                         >
@@ -774,20 +802,26 @@ export const ProjectDetail = () => {
 
       </Paper>
 
-      <Menu
+      {isOwner && <Menu
         anchorEl={anchorEl}
         open={Boolean(anchorEl)}
         onClose={handleMenuClose}
       >
-        <MenuItem onClick={handleMenuClose}>
+        {showProjectSettings && <MenuItem onClick={handleMenuClose}>
           <SettingsIcon sx={{ mr: 1 }} />
           Project Settings
-        </MenuItem>
-        <Divider />
-        <MenuItem onClick={handleMenuClose} sx={{ color: 'error.main' }}>
+        </MenuItem>}
+
+        <MenuItem sx={{ color: 'error.main' }}
+          onClick={() => {
+            setDeleteDialog({ open: true, project: displayProject });
+            handleMenuClose();
+          }}
+        >
           Delete Project
         </MenuItem>
-      </Menu>
+
+      </Menu>}
 
       {/* Remove API key menu */}
       {isOwnerOrAdmin && (
@@ -879,7 +913,29 @@ export const ProjectDetail = () => {
         />
       )}
 
-
+      <Dialog
+        open={deleteDialog.open}
+        onClose={() => setDeleteDialog({ open: false })}
+      >
+        <DialogTitle>Delete Project</DialogTitle>
+        <DialogContent>
+          <Typography>
+            Are you sure you want to delete "{deleteDialog.project?.name}"?
+            This action cannot be undone and will remove all associated API keys and data.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteDialog({ open: false })}>Cancel</Button>
+          <Button
+            onClick={handleDeleteProject}
+            color="error"
+            variant="contained"
+            disabled={deleteProjectMutation.isPending}
+          >
+            {deleteProjectMutation.isPending ? 'Deleting...' : 'Delete'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

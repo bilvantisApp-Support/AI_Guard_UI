@@ -46,6 +46,8 @@ import { useQuery } from '@tanstack/react-query';
 import { analyticsService } from '@/services/analyticsService';
 import { AnalyticsDataResponse } from '@/types/analytics';
 import { useParams } from 'react-router-dom';
+import { projectService } from '@/services/projectService';
+import { Project } from '@/types/api';
 
 export interface AnalyticsData {
   period: string;
@@ -101,6 +103,12 @@ export const Analytics = () => {
     retry: 2,
   });
 
+  const { data: allProjects = [] } = useQuery<Project[]>({
+    queryKey: ['projects'],
+    queryFn: projectService.getProjects,
+    staleTime: 5 * 60 * 1000,
+  });
+
   useEffect(() => {
     if (projectIdFromRoute) {
       setSelectedProject(projectIdFromRoute);
@@ -152,6 +160,17 @@ export const Analytics = () => {
   const totalCost = displayAnalyticsData.reduce((sum, item) => sum + item.cost, 0);
   const avgLatency = displayAnalyticsData.length > 0 ? displayAnalyticsData.reduce((sum, item) => sum + item.latency, 0) / displayAnalyticsData.length : 0;
 
+  const analyticsProjects = analyticsData?.projects ?? [];
+  const projectOptions = (allProjects.length ? allProjects : analyticsProjects).map((p) => ({
+    id: p.id,
+    name: p.name,
+  }));
+  const isSelectedProjectVisible =
+    selectedProject === 'all' || projectOptions.some((p) => p.id === selectedProject);
+  const visibleProjectOptions = isSelectedProjectVisible
+    ? projectOptions
+    : [...projectOptions, { id: selectedProject, name: 'Current Project' }];
+
   return (
     <Box>
       <div ref={pdfRef}>
@@ -181,7 +200,7 @@ export const Analytics = () => {
               onChange={(e) => setSelectedProject(e.target.value)}
             >
               <MenuItem value="all">All Projects</MenuItem>
-              {analyticsData?.projects?.map((proj: any) => (
+              {visibleProjectOptions.map((proj: any) => (
                 <MenuItem key={proj.id} value={proj.id}>
                   {proj.name || proj.id}
                 </MenuItem>
@@ -219,7 +238,6 @@ export const Analytics = () => {
             subtitle="API calls made"
             icon={ApiIcon}
             color="primary"
-            trend={{ value: 15.2, isPositive: true }}
           />
         </Grid>
         <Grid item xs={12} sm={6} md={3} lg={3}>
@@ -229,7 +247,6 @@ export const Analytics = () => {
             subtitle="Input + output tokens"
             icon={TokenIcon}
             color="secondary"
-            trend={{ value: 8.7, isPositive: true }}
           />
         </Grid>
         <Grid item xs={12} sm={6} md={3} lg={3}>
@@ -239,7 +256,6 @@ export const Analytics = () => {
             subtitle={`~$${(totalCost / 7).toFixed(4)}/day avg`}
             icon={CostIcon}
             color="success"
-            trend={{ value: -3.1, isPositive: false }}
           />
         </Grid>
         <Grid item xs={12} sm={6} md={3} lg={3}>
@@ -249,7 +265,6 @@ export const Analytics = () => {
             subtitle="Response time"
             icon={LatencyIcon}
             color="warning"
-            trend={{ value: 12.5, isPositive: false }}
           />
         </Grid>
       </Grid>

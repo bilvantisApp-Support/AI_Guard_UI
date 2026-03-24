@@ -27,7 +27,6 @@ const schema = yup.object().shape({
   description: yup
     .string()
     .transform((value) => (value === '' ? undefined : value))
-    .optional()
     .max(200, 'Description must be less than 200 characters'),
 });
 
@@ -92,12 +91,13 @@ export const CreateTeamDialog = ({
           />
           <TextField
             label="Description"
+            required
             fullWidth
             multiline
             rows={3}
             {...register('description')}
             error={!!errors.description}
-            helperText={errors.description?.message || 'Optional'}
+            helperText={errors.description?.message}
             placeholder="e.g., Core AI engineering group..."
           />
         </Box>

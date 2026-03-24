@@ -6,7 +6,9 @@ import {
   Button,
   Typography,
   Box,
-  Alert
+  Alert,
+  InputAdornment,
+  IconButton
 } from "@mui/material";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import {
@@ -14,6 +16,33 @@ import {
   confirmPasswordReset
 } from "firebase/auth";
 import { auth } from "@/config/firebase";
+import { useForm } from "react-hook-form";
+import { yupResolver } from "@hookform/resolvers/yup";
+import * as yup from "yup";
+import {
+  Visibility,
+  VisibilityOff
+} from "@mui/icons-material";
+
+const schema = yup.object({
+  password: yup
+    .string()
+    .required("Password is required")
+    .min(8, "Password must be at least 8 characters")
+    .matches(
+      /^(?=.*[a-z])(?=.*[A-Z])(?=.*[^A-Za-z0-9]).{8,}$/,
+      "Password must include uppercase, lowercase, and a special character"
+    ),
+  confirmPassword: yup
+    .string()
+    .oneOf([yup.ref("password")], "Passwords do not match")
+    .required("Confirm password is required"),
+});
+
+type ResetPasswordForm = {
+  password: string;
+  confirmPassword: string;
+};
 
 export const ResetPassword = () => {
   const [searchParams] = useSearchParams();
@@ -21,11 +50,22 @@ export const ResetPassword = () => {
 
   const navigate = useNavigate();
 
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<ResetPasswordForm>({
+    resolver: yupResolver(schema),
+    defaultValues: {
+      password: "",
+      confirmPassword: "",
+    },
+  });
 
   useEffect(() => {
     if (!oobCode) {
@@ -33,22 +73,13 @@ export const ResetPassword = () => {
     }
   }, [oobCode]);
 
-  const handleSubmit = async () => {
+  const onSubmit = async (data: ResetPasswordForm) => {
     try {
       setError("");
-      if (password.length < 6) {
-        setError("Password must be at least 6 characters");
-        return;
-      }
-      if (password !== confirmPassword) {
-        setError("Passwords do not match");
-        return;
-      }
-
       if (oobCode) {
         await verifyPasswordResetCode(auth, oobCode);
-        await confirmPasswordReset(auth, oobCode, password);
-      }else{
+        await confirmPasswordReset(auth, oobCode, data.password);
+      } else {
         setError("Missing oobCode in the URL");
         return;
       }
@@ -77,26 +108,55 @@ export const ResetPassword = () => {
           <TextField
             fullWidth
             label="New Password"
-            type="password"
+            type={showPassword ? 'text' : 'password'}
             margin="normal"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            {...register("password")}
+            error={!!errors.password}
+            helperText={errors.password?.message}
+            InputProps={{
+              endAdornment: (
+                <InputAdornment position="end">
+                  <IconButton
+                    aria-label="toggle password visibility"
+                    onClick={() => setShowPassword(!showPassword)}
+                    edge="end"
+                  >
+                    {showPassword ? <VisibilityOff /> : <Visibility />}
+                  </IconButton>
+                </InputAdornment>
+              )
+            }}
           />
 
           <TextField
             fullWidth
             label="Confirm Password"
-            type="password"
+            type={showConfirmPassword ? 'text' : 'password'}
             margin="normal"
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
+            {...register("confirmPassword")}
+            error={!!errors.confirmPassword}
+            helperText={errors.confirmPassword?.message}
+            InputProps={{
+              endAdornment: (
+                <InputAdornment position="end">
+                  <IconButton
+                    aria-label="toggle confirm password visibility"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    edge="end"
+                  >
+                    {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
+                  </IconButton>
+                </InputAdornment>
+              )
+            }}
           />
 
           <Button
             fullWidth
             variant="contained"
             sx={{ mt: 2 }}
-            onClick={handleSubmit}
+            onClick={handleSubmit(onSubmit)}
+            disabled={isSubmitting}
           >
             Reset Password
           </Button>

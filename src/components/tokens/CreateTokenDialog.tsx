@@ -44,10 +44,10 @@ const schema = yup.object({
     .of(yup.string().required())
     .min(1, 'At least one scope is required')
     .required('Scopes are required'),
-  llmProvider: yup.string().oneOf(['openai', 'anthropic', 'gemini']).optional(),
-  projectId: yup.string().optional(),
+  llmProvider: yup.string().oneOf(['openai', 'anthropic', 'gemini']).required('LLM provider is required'),
+  projectId: yup.string().required('Project  is required'),
   userId: yup.string().required('User is required'),
-  expiresInDays: yup.number().optional().min(1).max(365),
+  expiresInDays: yup.number().transform((value, originalValue) => (originalValue === "" ? undefined : value)).optional().min(1).max(365),
 });
 
 
@@ -69,7 +69,6 @@ export const CreateTokenDialog = ({
     defaultValues: {
       name: '',
       scopes: ['api:read', 'api:write'],
-      llmProvider: 'openai',
       projectId: undefined,
       userId: undefined,
       expiresInDays: 30,
@@ -92,7 +91,7 @@ export const CreateTokenDialog = ({
     },
     enabled: !!selectedProjectId
   });
-  
+
   const { data: users = [] } = useQuery<UserOption[]>({
     queryKey: ['active-users', selectedProjectId],
     queryFn: async (): Promise<UserOption[]> => {
@@ -217,11 +216,11 @@ export const CreateTokenDialog = ({
             name="projectId"
             control={control}
             render={({ field }) => (
-              <FormControl fullWidth>
-                <InputLabel>Project Scope (Optional)</InputLabel>
+              <FormControl fullWidth error={!!errors.projectId}> 
+                <InputLabel>Project Scope</InputLabel>
                 <Select
                   {...field}
-                  label="Project Scope (Optional)"
+                  label="Project Scope"
                   value={field.value || ''}
                     MenuProps={{
                       PaperProps: {
@@ -240,9 +239,11 @@ export const CreateTokenDialog = ({
                     </MenuItem>
                   ))}
                 </Select>
-                <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, ml: 1 }}>
-                  Leave empty to grant access to all projects you have access to
-                </Typography>
+                {errors.projectId && (
+                  <Typography variant="caption" color="error" sx={{ mt: 0.5, ml: 1 }}>
+                    {errors.projectId.message}
+                  </Typography>
+                )}
               </FormControl>
             )}
           />
@@ -276,6 +277,11 @@ export const CreateTokenDialog = ({
                     ? 'Only members of the selected project are shown'
                     : 'All users are shown'}
                 </Typography>
+                {errors.userId && (
+                  <Typography variant="caption" color="error" sx={{ mt: 0.5, ml: 1 }}>
+                    {errors.userId.message}
+                  </Typography>
+                )}
               </FormControl>
             )}
           />

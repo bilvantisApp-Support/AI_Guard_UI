@@ -127,7 +127,6 @@ export const Dashboard = () => {
             icon={ApiIcon}
             color="primary"
             loading={statsLoading && !statsError}
-            trend={{ value: 12.5, isPositive: true }}
           />
         </Grid>
         <Grid item xs={12} sm={6} lg={3}>
@@ -138,7 +137,6 @@ export const Dashboard = () => {
             icon={TokenIcon}
             color="secondary"
             loading={statsLoading && !statsError}
-            trend={{ value: 8.3, isPositive: true }}
           />
         </Grid>
         <Grid item xs={12} sm={6} lg={3}>
@@ -149,7 +147,6 @@ export const Dashboard = () => {
             icon={CostIcon}
             color="success"
             loading={statsLoading && !statsError}
-            trend={{ value: -5.2, isPositive: false }}
           />
         </Grid>
         <Grid item xs={12} sm={6} lg={3}>

@@ -10,7 +10,6 @@ import {
   Button,
   Typography,
   Box,
-  Alert,
   InputAdornment,
   IconButton,
   Divider,
@@ -28,8 +27,13 @@ import { Turnstile } from "@marsidev/react-turnstile";
 import { otpService } from '@/services/otpService';
 
 const schema = yup.object({
-  name: yup.string().required('Name is required'),
-  email: yup.string().email('Invalid email').required('Email is required'),
+  name: yup.string().required('Name is required').matches(
+    /^[a-zA-Z\s]+$/,
+    'Name can only contain letters and spaces'
+  ),
+  email: yup.string().email('Invalid email').required('Email is required').matches(
+    /^[a-zA-Z0-9._%+-]+@bilvantis\.io$/, 'Only Bilvantis email addresses are allowed'
+  ),
   password: yup.string()
     .min(8, 'Password must be at least 8 characters')
     .matches(
@@ -63,7 +67,7 @@ export const Signup = () => {
   const [otpSent, setOtpSent] = useState(false);
   const [otpVerified, setOtpVerified] = useState(false);
   const [timer, setTimer] = useState<number>(0);
-  const { signup, error } = useAuth();
+  const { signup } = useAuth();
   const navigate = useNavigate();
   const { notify } = useNotification();
   // Enable sending OTP once the email service is ready
@@ -88,7 +92,7 @@ export const Signup = () => {
       notify('Account created successfully!', { type: 'success' });
       navigate('/login');
     } catch (err: any) {
-      notify(err.message || 'Signup failed', { type: 'error' });
+      notify('Failed to create account', { type: 'error' });
     }
   };
 
@@ -148,7 +152,7 @@ export const Signup = () => {
       await handleSubmit(onSubmit)();
 
     } catch (err: any) {
-      notify(err.message || 'Operation failed', { type: 'error' });
+      notify(err?.response?.data?.error?.message || 'Operation failed', { type: 'error' });
     }
   };
 
@@ -199,12 +203,6 @@ export const Signup = () => {
             Start managing your AI APIs securely
           </Typography>
 
-          {error && (
-            <Alert severity="error" sx={{ width: '100%', mb: 2 }}>
-              {error}
-            </Alert>
-          )}
-
           <Box component="form" sx={{ mt: 1, width: '100%' }}>
             <TextField
               margin="normal"
@@ -217,6 +215,7 @@ export const Signup = () => {
               {...register('name')}
               error={!!errors.name}
               helperText={errors.name?.message}
+              disabled={otpSent}
             />
             <TextField
               margin="normal"
@@ -228,6 +227,7 @@ export const Signup = () => {
               {...register('email')}
               error={!!errors.email}
               helperText={errors.email?.message}
+              disabled={otpSent}
             />
             <TextField
               margin="normal"
@@ -253,6 +253,7 @@ export const Signup = () => {
                   </InputAdornment>
                 ),
               }}
+              disabled={otpSent}
             />
             <TextField
               margin="normal"
@@ -278,6 +279,7 @@ export const Signup = () => {
                   </InputAdornment>
                 ),
               }}
+              disabled={otpSent}
             />
             <Box sx={{ mt: 2, display: "flex", justifyContent: "center" }}>
               <Turnstile
@@ -344,7 +346,7 @@ export const Signup = () => {
               sx={{ mt: 2 }}
             />
             {errors.agreeToTerms && (
-              <Typography variant="caption" color="error">
+              <Typography variant="caption" color="error" sx={{ display: 'block', mt: 0.5 }}>
                 {errors.agreeToTerms.message}
               </Typography>
             )}
@@ -354,7 +356,7 @@ export const Signup = () => {
               variant="contained"
               sx={{ mt: 3, mb: 2 }}
               disabled={isSubmitting || !captchaToken}
-              onClick={handleOtpAndSignup}
+              onClick={handleSubmit(handleOtpAndSignup)}
             >
               {
                 !SENT_OTP ? 'Sign Up' : !otpSent ? 'Send OTP' : !otpVerified ? 'Verify OTP' : 'Sign Up'

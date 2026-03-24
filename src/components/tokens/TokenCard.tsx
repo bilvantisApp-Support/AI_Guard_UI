@@ -15,6 +15,8 @@ import {
   DialogContent,
   DialogActions,
   Alert,
+  Tabs,
+  Tab,
 } from '@mui/material';
 import {
   MoreVert as MoreIcon,
@@ -23,6 +25,7 @@ import {
   VisibilityOff as VisibilityOffIcon,
   Lock as LockIcon,
   Folder as ProjectIcon,
+  Close as CloseIcon,
   Refresh as RefreshIcon,
 } from '@mui/icons-material';
 import { useState } from 'react';
@@ -44,7 +47,8 @@ export const TokenCard = ({ token, onDelete, onCopy }: TokenCardProps) => {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [showToken, setShowToken] = useState(false);
   const [rotateDialogOpen, setRotateDialogOpen] = useState(false);
-  const [rotatedToken, setRotatedToken] = useState<PersonalAccessToken | null>(null);
+  const [rotatedToken, setRotatedToken] = useState<{ open: boolean; token?: PersonalAccessToken }>({ open: false });
+  const [rotatedCodeTab, setRotatedCodeTab] = useState<string>('curl');
 
   const { notify } = useNotification();
   const queryClient = useQueryClient();
@@ -64,17 +68,21 @@ export const TokenCard = ({ token, onDelete, onCopy }: TokenCardProps) => {
 
   const userRole = User?.role;
   const canManageToken = userRole === 'owner' || userRole === 'admin';
+ const showRenewToken = false;
 
-  const projectName = token.projectId 
+  const projectName = token.projectId
     ? projects.find(p => p.id === token.projectId)?.name || `Project ${token.projectId}`
     : null;
 
   const rotateMutation = useMutation({
     mutationFn: userService.rotateToken,
     onSuccess: (newToken) => {
-      queryClient.invalidateQueries({ queryKey: ['user-tokens'] });
-      setRotatedToken(newToken);
       notify('Token rotated successfully! New token value is shown below.', { type: 'success' });
+      const firstSnippetKey = newToken.snippets
+        ? Object.keys(newToken.snippets).find((key) => newToken.snippets?.[key])
+        : undefined;
+      setRotatedCodeTab(firstSnippetKey || 'curl');
+      setRotatedToken({ token: newToken, open: true });
     },
     onError: (error: any) => {
       notify(error.message || 'Failed to rotate token', { type: 'error' });
@@ -111,8 +119,8 @@ export const TokenCard = ({ token, onDelete, onCopy }: TokenCardProps) => {
   };
 
   const handleCopyRotatedToken = () => {
-    if (rotatedToken?.token) {
-      onCopy(rotatedToken.token);
+    if (rotatedToken.token) {
+      onCopy(rotatedToken.token.token!);
       notify('New token copied to clipboard!', { type: 'success' });
     }
   };
@@ -121,12 +129,22 @@ export const TokenCard = ({ token, onDelete, onCopy }: TokenCardProps) => {
     setShowToken(!showToken);
   };
 
+  const handleCloseRotatedDialog = () => {
+    setRotatedToken({ open: false });
+    queryClient.invalidateQueries({ queryKey: ['user-tokens'] });
+  };
+
+  const rotatedSnippets = rotatedToken?.token?.snippets ?? {};
+  const snippets = Object.fromEntries(
+    Object.entries(rotatedSnippets).filter(([_, value]) => value !== "")
+  ) as Record<string, string>;
+
   const isExpired = token.expiresAt ? isAfter(new Date(), new Date(token.expiresAt)) : false;
   const isExpiringSoon = token.expiresAt 
     ? isAfter(new Date(token.expiresAt), new Date()) && 
       isAfter(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), new Date(token.expiresAt))
     : false;
-  
+
   const isRevoked = token.isRevoked;
 
   const getStatusColor = () => {
@@ -248,7 +266,7 @@ export const TokenCard = ({ token, onDelete, onCopy }: TokenCardProps) => {
           <Typography variant="body2" color="text.secondary">
             Created {formatDistanceToNow(new Date(token.createdAt), { addSuffix: true })}
           </Typography>
-          
+
           {token.expiresAt && (
             <Typography 
               variant="body2" 
@@ -260,13 +278,13 @@ export const TokenCard = ({ token, onDelete, onCopy }: TokenCardProps) => {
               }
             </Typography>
           )}
-          
+
           {!token.expiresAt && (
             <Typography variant="body2" color="text.secondary">
               Never expires
             </Typography>
           )}
-          
+
           {token.lastUsedAt ? (
             <Typography variant="body2" color="text.secondary">
               Last used {formatDistanceToNow(new Date(token.lastUsedAt), { addSuffix: true })}
@@ -326,7 +344,7 @@ export const TokenCard = ({ token, onDelete, onCopy }: TokenCardProps) => {
           </Box>
         </Box>
 
-        {isExpiringSoon && !isRevoked && (
+        {showRenewToken &&isExpiringSoon && !isRevoked && canManageToken && (
           <Box mt={2}>
             <Button
               size="small"
@@ -401,19 +419,24 @@ export const TokenCard = ({ token, onDelete, onCopy }: TokenCardProps) => {
 
       {/* New Token Display Dialog */}
       <Dialog
-        open={!!rotatedToken}
-        onClose={() => setRotatedToken(null)}
+        open={rotatedToken.open}
+        onClose={handleCloseRotatedDialog}
         maxWidth="md"
         fullWidth
       >
-        <DialogTitle>Token Rotated Successfully</DialogTitle>
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          Token Rotated Successfully
+          <IconButton onClick={handleCloseRotatedDialog}>
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
         <DialogContent>
           <Alert severity="success" sx={{ mb: 3 }}>
             <strong>Token rotated!</strong> Copy the new token value below. You won't be able to see it again!
           </Alert>
-          
+
           <Typography variant="h6" gutterBottom>
-            {rotatedToken?.name}
+            {rotatedToken.token?.name}
           </Typography>
           
           <Box 
@@ -434,24 +457,73 @@ export const TokenCard = ({ token, onDelete, onCopy }: TokenCardProps) => {
                 fontSize: '0.9rem',
               }}
             >
-              {rotatedToken?.token}
+              {rotatedToken.token?.token}
             </Typography>
             <IconButton onClick={handleCopyRotatedToken} color="primary">
               <CopyIcon />
             </IconButton>
           </Box>
-          
+
           <Typography variant="body2" color="text.secondary">
             Use this token to authenticate your API requests. The old token has been revoked and is no longer valid.
           </Typography>
+
+          <Tabs
+            value={rotatedCodeTab}
+            onChange={(_, v) => setRotatedCodeTab(v)}
+            sx={{ mb: 2 }}
+          >
+            {Object.keys(snippets).map((lang) => (
+              <Tab key={lang} label={lang} value={lang} />
+            ))}
+          </Tabs>
+
+          <Box sx={{ position: 'relative' }}>
+            {/* Copy Button */}
+            <IconButton
+              size="small"
+              onClick={() => {
+                const code = snippets[rotatedCodeTab]?.replaceAll("YOUR_PAT_TOKEN", rotatedToken.token?.token || '') || '';
+                navigator.clipboard.writeText(code);
+                notify('Copied to clipboard!', { type: 'success' });
+              }}
+              sx={{
+                position: 'absolute',
+                right: 8,
+                top: 8,
+                color: 'white',
+                bgcolor: 'rgba(255,255,255,0.16)',
+                '&:hover': { bgcolor: 'rgba(255,255,255,0.28)' },
+                zIndex: 1,
+              }}
+            >
+              <CopyIcon fontSize="small" />
+            </IconButton>
+
+            <Box
+              component="pre"
+              sx={{
+                bgcolor: 'grey.900',
+                color: 'white',
+                p: 2,
+                pt: 5,
+                borderRadius: 1,
+                fontSize: '0.8rem',
+                overflow: 'auto',
+              }}
+            >
+              {snippets[rotatedCodeTab] ? snippets[rotatedCodeTab].replaceAll("YOUR_PAT_TOKEN", rotatedToken.token?.token || '') : ''}
+            </Box>
+          </Box>
+
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCopyRotatedToken} startIcon={<CopyIcon />}>
             Copy New Token
           </Button>
-          <Button 
-            variant="contained" 
-            onClick={() => setRotatedToken(null)}
+          <Button
+            variant="contained"
+            onClick={handleCloseRotatedDialog}
           >
             I've Saved This Token
           </Button>
